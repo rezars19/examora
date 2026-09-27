@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: examora_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-examorapass123}
+      POSTGRES_DB: ${DB_NAME:-examora}
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c work_mem=4MB
+      -c effective_cache_size=512MB
+      -c maintenance_work_mem=64MB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-examora}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: examora_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-examorapass123}@postgres:5432/${DB_NAME:-examora}?schema=public"
+      PORT: 3000
+      HOST: "0.0.0.0"
+      JWT_SECRET: ${JWT_SECRET:-examora_super_secure_jwt_secret_key_change_me_in_vps}
+      UPLOAD_DIR: "/app/uploads"
+      SUPERADMIN_IDENTIFIER: ${SUPERADMIN_IDENTIFIER:-superadmin}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-AdminExamora2026!}
+      SUPERADMIN_NAME: ${SUPERADMIN_NAME:-Super Administrator}
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads_data:/app/uploads
+
+volumes:
+  postgres_data:
+  uploads_data:
