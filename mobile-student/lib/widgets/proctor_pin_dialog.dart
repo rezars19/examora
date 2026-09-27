@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../core/services/api_service.dart';
 import '../core/services/security_service.dart';
-import '../screens/exam_list_screen.dart';
+import '../core/theme/app_theme.dart';
+import '../screens/dashboard_screen.dart';
 
 class ProctorPinDialog extends StatefulWidget {
   final String attemptId;
@@ -24,22 +25,24 @@ class _ProctorPinDialogState extends State<ProctorPinDialog> {
 
     final res = await ApiService.bypassPin(attemptId: widget.attemptId, pin: pin);
 
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
-    if (res.success && mounted) {
+    if (res.success) {
       await SecurityService.disableSecureExamMode();
+      if (!mounted) return;
       Navigator.pop(context); // Close dialog
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const ExamListScreen()),
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
         (route) => false,
       );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('PIN Pengawas berhasil. Mode aman dibuka.')),
       );
-    } else if (mounted) {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res.message), backgroundColor: Colors.red),
+        SnackBar(content: Text(res.message), backgroundColor: AppTheme.dangerRed),
       );
     }
   }
@@ -47,11 +50,13 @@ class _ProctorPinDialogState extends State<ProctorPinDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      backgroundColor: AppTheme.bgCard,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: const Row(
         children: [
-          Icon(Icons.admin_panel_settings, color: Colors.amber),
-          SizedBox(width: 8),
-          Text('PIN Pengawas Darurat'),
+          Icon(Icons.admin_panel_settings_rounded, color: AppTheme.goldAccent),
+          SizedBox(width: 10),
+          Text('PIN Pengawas Darurat', style: TextStyle(color: Colors.white, fontSize: 17)),
         ],
       ),
       content: Column(
@@ -60,7 +65,7 @@ class _ProctorPinDialogState extends State<ProctorPinDialog> {
         children: [
           const Text(
             'Hanya boleh diisi oleh Pengawas Ujian untuk membuka kunci perangkat dalam kondisi darurat.',
-            style: TextStyle(fontSize: 13, color: Colors.grey),
+            style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
           ),
           const SizedBox(height: 16),
           TextField(
@@ -68,6 +73,7 @@ class _ProctorPinDialogState extends State<ProctorPinDialog> {
             keyboardType: TextInputType.number,
             obscureText: true,
             maxLength: 6,
+            style: const TextStyle(color: Colors.white),
             decoration: const InputDecoration(
               labelText: '6 Digit PIN Pengawas',
               border: OutlineInputBorder(),
@@ -79,18 +85,18 @@ class _ProctorPinDialogState extends State<ProctorPinDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Batal'),
+          child: const Text('Batal', style: TextStyle(color: AppTheme.textMuted)),
         ),
         ElevatedButton(
           onPressed: _isLoading ? null : _handleBypass,
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.amber.shade800),
+          style: ElevatedButton.styleFrom(backgroundColor: AppTheme.goldAccent, foregroundColor: Colors.black),
           child: _isLoading
               ? const SizedBox(
                   width: 18,
                   height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
                 )
-              : const Text('Buka Kunci', style: TextStyle(color: Colors.white)),
+              : const Text('Buka Kunci', style: TextStyle(fontWeight: FontWeight.bold)),
         ),
       ],
     );

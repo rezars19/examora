@@ -15,7 +15,7 @@ class ExamoraApp extends StatelessWidget {
     return MaterialApp(
       title: 'Examora Siswa',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
+      theme: AppTheme.darkTheme,
       home: const SplashScreen(),
     );
   }

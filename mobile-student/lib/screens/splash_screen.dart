@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../core/services/storage_service.dart';
 import '../core/theme/app_theme.dart';
-import 'login_screen.dart';
-import 'exam_list_screen.dart';
+import 'select_school_screen.dart';
+import 'dashboard_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,7 +13,7 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
+  late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
   late Animation<double> _glowAnimation;
@@ -22,39 +22,39 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   void initState() {
     super.initState();
 
-    _animController = AnimationController(
+    _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 2200),
     );
 
     _scaleAnimation = CurvedAnimation(
-      parent: _animController,
+      parent: _controller,
       curve: const Interval(0.0, 0.7, curve: Curves.easeOutBack),
     );
 
     _fadeAnimation = CurvedAnimation(
-      parent: _animController,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
+      parent: _controller,
+      curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
     );
 
-    _glowAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
+    _glowAnimation = Tween<double>(begin: 0.85, end: 1.15).animate(
       CurvedAnimation(
-        parent: _animController,
-        curve: const Interval(0.5, 1.0, curve: Curves.easeInOut),
+        parent: _controller,
+        curve: const Interval(0.4, 1.0, curve: Curves.easeInOut),
       ),
     );
 
-    _animController.forward();
-    _startSessionCheck();
+    _controller.forward();
+    _checkNextScreen();
   }
 
   @override
   void dispose() {
-    _animController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _startSessionCheck() async {
+  Future<void> _checkNextScreen() async {
     final timerFuture = Future.delayed(const Duration(milliseconds: 2600));
     final tokenFuture = StorageService.getToken();
 
@@ -67,8 +67,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 600),
         pageBuilder: (_, __, ___) => (token != null && token.isNotEmpty)
-            ? const ExamListScreen()
-            : const LoginScreen(),
+            ? const DashboardScreen()
+            : const SelectSchoolScreen(),
         transitionsBuilder: (_, animation, __, child) {
           return FadeTransition(opacity: animation, child: child);
         },
@@ -79,49 +79,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF070D1F),
+      backgroundColor: AppTheme.bgDark,
       body: Stack(
         children: [
-          // Background subtle ambient radial gradients
-          Positioned(
-            top: -100,
-            right: -100,
-            child: Container(
-              width: 320,
-              height: 320,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppTheme.royalBlue.withOpacity(0.35),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -80,
-            left: -80,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppTheme.cyanAccent.withOpacity(0.2),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Central Logo and Branding
+          // Ambient Glow behind logo
           Center(
             child: AnimatedBuilder(
-              animation: _animController,
+              animation: _controller,
               builder: (context, child) {
                 return Opacity(
                   opacity: _fadeAnimation.value,
@@ -130,73 +94,47 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Soft glow behind logo
                         Stack(
                           alignment: Alignment.center,
                           children: [
                             Transform.scale(
                               scale: _glowAnimation.value,
                               child: Container(
-                                width: 170,
-                                height: 170,
+                                width: 220,
+                                height: 220,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: AppTheme.royalBlue.withOpacity(0.4),
-                                      blurRadius: 50,
+                                      color: AppTheme.cyanAccent.withValues(alpha: 0.35),
+                                      blurRadius: 70,
                                       spreadRadius: 10,
                                     ),
                                     BoxShadow(
-                                      color: AppTheme.cyanAccent.withOpacity(0.25),
-                                      blurRadius: 30,
-                                      spreadRadius: 5,
+                                      color: AppTheme.royalBlue.withValues(alpha: 0.4),
+                                      blurRadius: 50,
+                                      spreadRadius: 2,
                                     ),
                                   ],
                                 ),
                               ),
                             ),
-                            // Logo Image
                             Image.asset(
                               'assets/images/logo.png',
-                              width: 190,
-                              height: 190,
+                              width: 220,
+                              height: 220,
                               fit: BoxFit.contain,
                             ),
                           ],
                         ),
-                        const SizedBox(height: 28),
-
-                        // Subtitle badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(30),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.12),
-                              width: 1,
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.shield_outlined,
-                                color: AppTheme.cyanAccent,
-                                size: 16,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Secure Digital Examination',
-                                style: TextStyle(
-                                  color: Color(0xFFE2E8F0),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.8,
-                                ),
-                              ),
-                            ],
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Secure. Simple. Smarter Examination.',
+                          style: TextStyle(
+                            color: AppTheme.textMuted,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ],
@@ -207,33 +145,22 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             ),
           ),
 
-          // Bottom Loading Spinner & Version
+          // Bottom Loading spinner
           Positioned(
             left: 0,
             right: 0,
             bottom: 48,
-            child: Column(
-              children: [
-                SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppTheme.cyanAccent.withOpacity(0.85),
-                    ),
+            child: Center(
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    AppTheme.cyanAccent.withValues(alpha: 0.8),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'Memuat sistem ujian...',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
-                    fontSize: 12,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ],

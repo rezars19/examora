@@ -3,12 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../core/constants/api_constants.dart';
 import '../core/services/api_service.dart';
-import '../core/services/security_service.dart';
 import '../core/theme/app_theme.dart';
 import '../models/question_model.dart';
 import '../widgets/proctor_pin_dialog.dart';
 import '../widgets/question_nav_sheet.dart';
-import 'exam_result_screen.dart';
+import 'submit_process_screen.dart';
 
 class ExamRunnerScreen extends StatefulWidget {
   final String attemptId;
@@ -36,7 +35,6 @@ class _ExamRunnerScreenState extends State<ExamRunnerScreen> with WidgetsBinding
   late Timer _countdownTimer;
   Duration _remainingTime = Duration.zero;
 
-  bool _isSubmitting = false;
   bool _isBlocked = false;
   int _violationCount = 0;
 
@@ -88,12 +86,9 @@ class _ExamRunnerScreenState extends State<ExamRunnerScreen> with WidgetsBinding
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'PERINGATAN! Keluar dari aplikasi dicatat sebagai pelanggaran ($_violationCount).',
-          ),
-          backgroundColor: const Color(0xFFDC2626),
+          content: Text('PERINGATAN! Keluar aplikasi tercatat pelanggaran ($_violationCount).'),
+          backgroundColor: AppTheme.dangerRed,
           behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 4),
         ),
       );
     }
@@ -124,13 +119,15 @@ class _ExamRunnerScreenState extends State<ExamRunnerScreen> with WidgetsBinding
   }
 
   void _handleTimeExpired() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Waktu ujian telah berakhir. Mengirimkan jawaban otomatis...'),
-        backgroundColor: Colors.orange,
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SubmitProcessScreen(
+          attemptId: widget.attemptId,
+          examTitle: widget.examTitle,
+        ),
       ),
     );
-    _submitExam(autoSubmit: true);
   }
 
   String _formatDuration(Duration d) {
@@ -186,83 +183,145 @@ class _ExamRunnerScreenState extends State<ExamRunnerScreen> with WidgetsBinding
     return count;
   }
 
-  Future<void> _submitExam({bool autoSubmit = false}) async {
-    if (!autoSubmit) {
-      int doubtful = 0;
-      for (final a in _answers.values) {
-        if (a.isDoubtful) doubtful++;
-      }
+  // --- SCREEN 10: KONFIRMASI PENGUMPULAN ---
+  void _showSubmitConfirmationDialog() {
+    final total = widget.questions.length;
+    final answered = _answeredCount;
+    final unanswered = total - answered;
 
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Kumpulkan Lembar Ujian?'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSummaryRow('Total Soal', '${widget.questions.length}', Colors.black87),
-              const SizedBox(height: 6),
-              _buildSummaryRow('Sudah Dijawab', '$_answeredCount', const Color(0xFF059669)),
-              const SizedBox(height: 6),
-              _buildSummaryRow('Ragu-ragu', '$doubtful', const Color(0xFFD97706)),
-              const SizedBox(height: 6),
-              _buildSummaryRow('Belum Dijawab', '${widget.questions.length - _answeredCount}', const Color(0xFFDC2626)),
-              const SizedBox(height: 16),
-              const Text(
-                'Perhatian: Lembar jawaban akan langsung dinilai oleh sistem dan tidak dapat diubah lagi.',
-                style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: AppTheme.bgDark,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border(top: BorderSide(color: AppTheme.borderDark, width: 1.5)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.borderDark,
+                borderRadius: BorderRadius.circular(2),
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Periksa Kembali'),
             ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669)),
-              child: const Text('Ya, Kumpulkan Sekarang', style: TextStyle(color: Colors.white)),
+            const SizedBox(height: 24),
+
+            // Document illustration
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppTheme.bgCard,
+                border: Border.all(color: AppTheme.cyanAccent.withValues(alpha: 0.3)),
+              ),
+              child: const Icon(Icons.assignment_turned_in_rounded, size: 36, color: AppTheme.cyanAccent),
             ),
+            const SizedBox(height: 18),
+
+            const Text(
+              'Konfirmasi Pengumpulan',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Pastikan semua jawaban sudah benar sebelum mengumpulkan ujian.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
+            ),
+            const SizedBox(height: 24),
+
+            // 3 Metric Cards (Total, Terjawab, Belum Terjawab)
+            Row(
+              children: [
+                _buildStatCard('Total Soal', '$total', Colors.white),
+                const SizedBox(width: 10),
+                _buildStatCard('Terjawab', '$answered', AppTheme.successGreen),
+                const SizedBox(width: 10),
+                _buildStatCard('Belum Terjawab', '$unanswered', unanswered > 0 ? AppTheme.dangerRed : AppTheme.textMuted),
+              ],
+            ),
+            const SizedBox(height: 28),
+
+            // Button Kumpulkan Ujian (Cyan Gradient)
+            Container(
+              width: double.infinity,
+              height: 50,
+              decoration: BoxDecoration(
+                gradient: AppTheme.cyanGradient,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.cyanAccent.withValues(alpha: 0.3),
+                    blurRadius: 14,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx); // Close dialog
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SubmitProcessScreen(
+                        attemptId: widget.attemptId,
+                        examTitle: widget.examTitle,
+                      ),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  foregroundColor: AppTheme.bgDark,
+                ),
+                child: const Text('Kumpulkan Ujian', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Button Periksa Kembali
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Periksa Kembali', style: TextStyle(color: Colors.white)),
+              ),
+            ),
+            const SizedBox(height: 8),
           ],
         ),
-      );
-
-      if (confirm != true) return;
-    }
-
-    setState(() => _isSubmitting = true);
-
-    final res = await ApiService.submitExam(attemptId: widget.attemptId);
-
-    // Lepas Kiosk LockTask & FLAG_SECURE
-    await SecurityService.disableSecureExamMode();
-
-    if (mounted) {
-      setState(() => _isSubmitting = false);
-      final score = res.data != null ? (res.data!['score'] as num?)?.toDouble() : null;
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ExamResultScreen(
-            examTitle: widget.examTitle,
-            score: score,
-          ),
-        ),
-      );
-    }
+      ),
+    );
   }
 
-  Widget _buildSummaryRow(String label, String value, Color color) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 14)),
-        Text(value, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: color)),
-      ],
+  Widget _buildStatCard(String label, String value, Color valueColor) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: AppTheme.bgCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.borderDark),
+        ),
+        child: Column(
+          children: [
+            Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: valueColor)),
+            const SizedBox(height: 4),
+            Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted), textAlign: TextAlign.center),
+          ],
+        ),
+      ),
     );
   }
 
@@ -270,32 +329,24 @@ class _ExamRunnerScreenState extends State<ExamRunnerScreen> with WidgetsBinding
   Widget build(BuildContext context) {
     if (_isBlocked) {
       return Scaffold(
+        backgroundColor: AppTheme.bgDark,
         body: Center(
           child: Padding(
-            padding: const EdgeInsets.all(32.0),
+            padding: const EdgeInsets.all(28.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFFFECACA), width: 2),
-                  ),
-                  child: const Icon(Icons.lock_rounded, size: 40, color: Color(0xFFDC2626)),
-                ),
+                const Icon(Icons.block_rounded, size: 72, color: AppTheme.dangerRed),
                 const SizedBox(height: 20),
                 const Text(
-                  'Sesi Ujian Dikunci',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textMain),
+                  'Ujian Terkunci',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Aktivitas keluar aplikasi terdeteksi sebanyak $_violationCount kali. Hubungi Pengawas untuk verifikasi PIN darurat.',
+                  'Batas pelanggaran terlampaui ($_violationCount kali keluar aplikasi). Hubungi pengawas untuk verifikasi PIN.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, color: AppTheme.textMuted, height: 1.4),
+                  style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
                 ),
                 const SizedBox(height: 28),
                 ElevatedButton.icon(
@@ -305,9 +356,9 @@ class _ExamRunnerScreenState extends State<ExamRunnerScreen> with WidgetsBinding
                       builder: (_) => ProctorPinDialog(attemptId: widget.attemptId),
                     );
                   },
-                  icon: const Icon(Icons.key),
-                  label: const Text('Buka Kunci dengan PIN Pengawas'),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+                  icon: const Icon(Icons.key_rounded),
+                  label: const Text('Buka Kunci PIN Pengawas'),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.dangerRed),
                 ),
               ],
             ),
@@ -319,10 +370,6 @@ class _ExamRunnerScreenState extends State<ExamRunnerScreen> with WidgetsBinding
     final currentQuestion = widget.questions[_currentIndex];
     final currentAnswer = _answers[currentQuestion.id]!;
     final isLast = _currentIndex == widget.questions.length - 1;
-    final progressFraction = widget.questions.isNotEmpty ? (_answeredCount / widget.questions.length) : 0.0;
-
-    final isUrgentTime = _remainingTime.inMinutes < 5;
-    final isWarningTime = _remainingTime.inMinutes < 10 && !isUrgentTime;
 
     return PopScope(
       canPop: false,
@@ -330,76 +377,64 @@ class _ExamRunnerScreenState extends State<ExamRunnerScreen> with WidgetsBinding
         if (!didPop) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Tombol kembali dinonaktifkan dalam mode ujian aman.'),
+              content: Text('Tombol kembali dinonaktifkan selama ujian berlangsung.'),
               behavior: SnackBarBehavior.floating,
             ),
           );
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF1F5F9),
+        backgroundColor: AppTheme.bgDark,
         appBar: AppBar(
           automaticallyImplyLeading: false,
-          backgroundColor: Colors.white,
-          elevation: 0,
+          backgroundColor: AppTheme.bgSurface,
           titleSpacing: 16,
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          title: Row(
             children: [
-              Text(
-                widget.examTitle,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textMuted),
+              IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Colors.white),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Ujian harus diselesaikan atau ditutup pengawas.')),
+                  );
+                },
               ),
-              const SizedBox(height: 2),
-              Text(
-                'Soal ${_currentIndex + 1} dari ${widget.questions.length}',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textMain),
+              const SizedBox(width: 4),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.examTitle,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  Text(
+                    '${_currentIndex + 1} dari ${widget.questions.length} soal',
+                    style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                  ),
+                ],
               ),
             ],
           ),
           actions: [
-            // Timer Badge
+            // Cyan Timer Pill
             Container(
-              margin: const EdgeInsets.symmetric(vertical: 8),
+              margin: const EdgeInsets.symmetric(vertical: 10),
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                color: isUrgentTime
-                    ? const Color(0xFFFEF2F2)
-                    : isWarningTime
-                        ? const Color(0xFFFFFBEB)
-                        : const Color(0xFFEFF6FF),
+                color: AppTheme.cyanAccent.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isUrgentTime
-                      ? const Color(0xFFFECACA)
-                      : isWarningTime
-                          ? const Color(0xFFFDE68A)
-                          : const Color(0xFFBFDBFE),
-                ),
+                border: Border.all(color: AppTheme.cyanAccent.withValues(alpha: 0.4)),
               ),
-              alignment: Alignment.center,
               child: Row(
                 children: [
-                  Icon(
-                    Icons.timer_outlined,
-                    size: 16,
-                    color: isUrgentTime
-                        ? const Color(0xFFDC2626)
-                        : isWarningTime
-                            ? const Color(0xFFD97706)
-                            : AppTheme.royalBlue,
-                  ),
+                  const Icon(Icons.access_time_rounded, size: 14, color: AppTheme.cyanAccent),
                   const SizedBox(width: 6),
                   Text(
                     _formatDuration(_remainingTime),
-                    style: TextStyle(
+                    style: const TextStyle(
+                      color: AppTheme.cyanAccent,
+                      fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: isUrgentTime
-                          ? const Color(0xFFDC2626)
-                          : isWarningTime
-                              ? const Color(0xFFD97706)
-                              : AppTheme.royalBlue,
                     ),
                   ),
                 ],
@@ -407,9 +442,9 @@ class _ExamRunnerScreenState extends State<ExamRunnerScreen> with WidgetsBinding
             ),
             const SizedBox(width: 8),
 
-            // Proctor Emergency Key
+            // Proctor PIN emergency button
             IconButton(
-              icon: const Icon(Icons.key_rounded, color: AppTheme.goldAccent),
+              icon: const Icon(Icons.key_rounded, color: AppTheme.goldAccent, size: 20),
               tooltip: 'PIN Pengawas',
               onPressed: () {
                 showDialog(
@@ -420,239 +455,200 @@ class _ExamRunnerScreenState extends State<ExamRunnerScreen> with WidgetsBinding
             ),
             const SizedBox(width: 8),
           ],
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(4),
-            child: LinearProgressIndicator(
-              value: progressFraction,
-              backgroundColor: const Color(0xFFE2E8F0),
-              valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.cyanAccent),
-              minHeight: 4,
-            ),
-          ),
         ),
-        body: _isSubmitting
-            ? const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Menghitung nilai & menyerahkan lembar ujian...'),
-                  ],
-                ),
-              )
-            : SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Question Card
-                    Container(
-                      padding: const EdgeInsets.all(20),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Question Header Row (Nomor X & Tandai Bookmark)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Nomor ${_currentIndex + 1}',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+                  ),
+                  InkWell(
+                    onTap: () => _toggleDoubtful(currentQuestion.id),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppTheme.borderLight),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                        color: currentAnswer.isDoubtful
+                            ? AppTheme.goldAccent.withValues(alpha: 0.2)
+                            : AppTheme.bgCard,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: currentAnswer.isDoubtful ? AppTheme.goldAccent : AppTheme.borderDark,
+                        ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: [
-                          // Points Pill
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF1F5F9),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  'Bobot: ${currentQuestion.points} Poin',
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
-                                ),
-                              ),
-                              if (currentAnswer.isDoubtful)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFEF3C7),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: const Row(
-                                    children: [
-                                      Icon(Icons.flag_rounded, size: 13, color: Color(0xFFD97706)),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'Ragu-ragu',
-                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
+                          Icon(
+                            currentAnswer.isDoubtful ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                            size: 16,
+                            color: currentAnswer.isDoubtful ? AppTheme.goldAccent : AppTheme.textMuted,
                           ),
-                          const SizedBox(height: 14),
-
-                          // Text Content
+                          const SizedBox(width: 4),
                           Text(
-                            currentQuestion.content,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              height: 1.6,
-                              fontWeight: FontWeight.w500,
-                              color: AppTheme.textMain,
+                            'Tandai',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: currentAnswer.isDoubtful ? AppTheme.goldAccent : AppTheme.textMuted,
                             ),
                           ),
-
-                          // Media Image
-                          if (currentQuestion.mediaUrl != null && currentQuestion.mediaUrl!.isNotEmpty) ...[
-                            const SizedBox(height: 16),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: CachedNetworkImage(
-                                imageUrl: currentQuestion.mediaUrl!.startsWith('http')
-                                    ? currentQuestion.mediaUrl!
-                                    : '${ApiConstants.baseUrl.replaceAll("/api", "")}${currentQuestion.mediaUrl}',
-                                placeholder: (context, url) => const SizedBox(
-                                  height: 160,
-                                  child: Center(child: CircularProgressIndicator()),
-                                ),
-                                errorWidget: (context, url, error) => Container(
-                                  height: 100,
-                                  color: Colors.grey.shade100,
-                                  child: const Center(child: Text('Gambar tidak dapat dimuat.')),
-                                ),
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
 
-                    // Options List
-                    if (currentQuestion.type == 'SINGLE_CHOICE') ...[
-                      ...currentQuestion.options.map((opt) {
-                        final isSelected = currentAnswer.selectedOptionIds.contains(opt.id);
-                        return InkWell(
-                          onTap: () => _onAnswerChanged(currentQuestion.id, [opt.id]),
-                          borderRadius: BorderRadius.circular(14),
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 10),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: isSelected ? AppTheme.royalBlue : AppTheme.borderLight,
-                                width: isSelected ? 1.8 : 1.2,
-                              ),
-                              boxShadow: [
+              // Question Text Content
+              Text(
+                currentQuestion.content,
+                style: const TextStyle(
+                  fontSize: 16,
+                  height: 1.6,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Image / Geometry Media if any
+              if (currentQuestion.mediaUrl != null && currentQuestion.mediaUrl!.isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: CachedNetworkImage(
+                    imageUrl: currentQuestion.mediaUrl!.startsWith('http')
+                        ? currentQuestion.mediaUrl!
+                        : '${ApiConstants.baseUrl.replaceAll("/api", "")}${currentQuestion.mediaUrl}',
+                    placeholder: (_, __) => const SizedBox(
+                      height: 160,
+                      child: Center(child: CircularProgressIndicator(color: AppTheme.cyanAccent)),
+                    ),
+                    errorWidget: (_, __, ___) => Container(
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: AppTheme.bgCard,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppTheme.borderDark),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text('Gambar tidak dapat dimuat.', style: TextStyle(color: AppTheme.textMuted)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+
+              // Options / Essay
+              if (currentQuestion.type == 'SINGLE_CHOICE') ...[
+                ...currentQuestion.options.map((opt) {
+                  final isSelected = currentAnswer.selectedOptionIds.contains(opt.id);
+                  return InkWell(
+                    onTap: () => _onAnswerChanged(currentQuestion.id, [opt.id]),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppTheme.cyanAccent.withValues(alpha: 0.12) : AppTheme.bgCard,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isSelected ? AppTheme.cyanAccent : AppTheme.borderDark,
+                          width: isSelected ? 1.8 : 1.2,
+                        ),
+                        boxShadow: isSelected
+                            ? [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.015),
-                                  blurRadius: 6,
+                                  color: AppTheme.cyanAccent.withValues(alpha: 0.18),
+                                  blurRadius: 12,
                                   offset: const Offset(0, 2),
                                 ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: isSelected ? AppTheme.royalBlue : const Color(0xFFF1F5F9),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    opt.id,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: isSelected ? Colors.white : AppTheme.textMain,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Text(
-                                    opt.text,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                      color: isSelected ? AppTheme.royalBlue : AppTheme.textMain,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }),
-                    ] else if (currentQuestion.type == 'MULTIPLE_CHOICE') ...[
-                      ...currentQuestion.options.map((opt) {
-                        final isSelected = currentAnswer.selectedOptionIds.contains(opt.id);
-                        return InkWell(
-                          onTap: () {
-                            final list = List<String>.from(currentAnswer.selectedOptionIds);
-                            if (isSelected) {
-                              list.remove(opt.id);
-                            } else {
-                              list.add(opt.id);
-                            }
-                            _onAnswerChanged(currentQuestion.id, list);
-                          },
-                          borderRadius: BorderRadius.circular(14),
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 10),
-                            padding: const EdgeInsets.all(16),
+                              ]
+                            : null,
+                      ),
+                      child: Row(
+                        children: [
+                          // Letter Pill A, B, C, D
+                          Container(
+                            width: 34,
+                            height: 34,
                             decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: isSelected ? AppTheme.royalBlue : AppTheme.borderLight,
-                                width: isSelected ? 1.8 : 1.2,
+                              shape: BoxShape.circle,
+                              color: isSelected ? AppTheme.cyanAccent : AppTheme.bgCardLight,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              opt.id,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: isSelected ? AppTheme.bgDark : Colors.white,
                               ),
                             ),
-                            child: Row(
-                              children: [
-                                Checkbox(
-                                  value: isSelected,
-                                  activeColor: AppTheme.royalBlue,
-                                  onChanged: (_) {},
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(child: Text(opt.text, style: const TextStyle(fontSize: 15))),
-                              ],
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Text(
+                              opt.text,
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: isSelected ? AppTheme.cyanAccent : Colors.white,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              ),
                             ),
                           ),
-                        );
-                      }),
-                    ] else ...[
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ] else ...[
+                // Essay Question (Screen 8 in mockup)
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.bgCard,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppTheme.borderDark),
+                  ),
+                  child: Column(
+                    children: [
+                      // Formatting Toolbar (B, I, U, etc.)
                       Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppTheme.borderLight),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: const BoxDecoration(
+                          color: AppTheme.bgCardLight,
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
                         ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.format_bold_rounded, size: 20, color: AppTheme.textMuted),
+                            SizedBox(width: 16),
+                            Icon(Icons.format_italic_rounded, size: 20, color: AppTheme.textMuted),
+                            SizedBox(width: 16),
+                            Icon(Icons.format_underlined_rounded, size: 20, color: AppTheme.textMuted),
+                            SizedBox(width: 16),
+                            Icon(Icons.format_list_bulleted_rounded, size: 20, color: AppTheme.textMuted),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
                         child: TextField(
-                          maxLines: 7,
+                          maxLines: 8,
+                          style: const TextStyle(color: Colors.white),
                           decoration: const InputDecoration(
-                            hintText: 'Tuliskan jawaban lengkap Anda di sini...',
+                            hintText: 'Tulis jawaban kamu di sini...',
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
                             focusedBorder: InputBorder.none,
+                            fillColor: Colors.transparent,
                           ),
                           controller: TextEditingController(text: currentAnswer.essayText)
                             ..selection = TextSelection.collapsed(
@@ -664,102 +660,99 @@ class _ExamRunnerScreenState extends State<ExamRunnerScreen> with WidgetsBinding
                         ),
                       ),
                     ],
-                    const SizedBox(height: 80),
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(height: 16),
 
-        // Bottom Navigation Bar
-        bottomNavigationBar: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 10,
-                offset: const Offset(0, -4),
-              ),
+                // Tambah Gambar Button
+                Container(
+                  width: double.infinity,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: AppTheme.bgCard,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.borderDark),
+                  ),
+                  child: OutlinedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.image_outlined, color: AppTheme.cyanAccent),
+                    label: const Text(
+                      'Tambah Gambar (PNG, JPG maks. 5 MB)',
+                      style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 80),
             ],
           ),
+        ),
+
+        // Bottom Bar (< Sebelumnya, Daftar Soal, Selanjutnya > / Selesai)
+        bottomNavigationBar: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: const BoxDecoration(
+            color: AppTheme.bgSurface,
+            border: Border(top: BorderSide(color: AppTheme.borderDark, width: 1.2)),
+          ),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Prev
-              IconButton.outlined(
-                onPressed: _currentIndex > 0 ? () => setState(() => _currentIndex--) : null,
-                icon: const Icon(Icons.arrow_back_ios_new, size: 16),
-              ),
-              const SizedBox(width: 8),
-
-              // Ragu-ragu Toggle
-              OutlinedButton.icon(
-                onPressed: () => _toggleDoubtful(currentQuestion.id),
-                icon: Icon(
-                  currentAnswer.isDoubtful ? Icons.flag : Icons.flag_outlined,
-                  size: 16,
-                  color: currentAnswer.isDoubtful ? const Color(0xFFD97706) : AppTheme.textMuted,
-                ),
-                label: Text(
-                  'Ragu',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: currentAnswer.isDoubtful ? const Color(0xFFD97706) : AppTheme.textMuted,
+              // Sebelumnya
+              SizedBox(
+                height: 44,
+                child: OutlinedButton(
+                  onPressed: _currentIndex > 0 ? () => setState(() => _currentIndex--) : null,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    side: const BorderSide(color: AppTheme.borderDark),
                   ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: currentAnswer.isDoubtful ? const Color(0xFFFEF3C7) : Colors.transparent,
-                  side: BorderSide(
-                    color: currentAnswer.isDoubtful ? const Color(0xFFFDE68A) : AppTheme.borderLight,
-                  ),
+                  child: const Text('< Sebelumnya', style: TextStyle(color: Colors.white, fontSize: 13)),
                 ),
               ),
-              const Spacer(),
 
-              // Grid Modal Button
-              TextButton.icon(
+              // Daftar Soal Trigger
+              IconButton(
+                icon: const Icon(Icons.grid_view_rounded, color: AppTheme.cyanAccent),
+                tooltip: 'Daftar Soal',
                 onPressed: () {
                   showModalBottomSheet(
                     context: context,
                     isScrollControlled: true,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                    ),
+                    backgroundColor: Colors.transparent,
                     builder: (_) => QuestionNavSheet(
                       questions: widget.questions,
                       answers: _answers,
                       currentIndex: _currentIndex,
-                      onSelectQuestion: (idx) {
-                        setState(() => _currentIndex = idx);
-                      },
+                      onSelectQuestion: (idx) => setState(() => _currentIndex = idx),
                     ),
                   );
                 },
-                icon: const Icon(Icons.grid_view_rounded, size: 18),
-                label: Text('$_answeredCount/${widget.questions.length}'),
               ),
-              const Spacer(),
 
-              // Next / Submit
-              if (!isLast)
-                ElevatedButton.icon(
-                  onPressed: () => setState(() => _currentIndex++),
-                  icon: const Icon(Icons.arrow_forward_ios, size: 14),
-                  label: const Text('Lanjut'),
+              // Selanjutnya / Kumpulkan
+              SizedBox(
+                height: 44,
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (!isLast) {
+                      setState(() => _currentIndex++);
+                    } else {
+                      _showSubmitConfirmationDialog();
+                    }
+                  },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.royalBlue,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    backgroundColor: isLast ? AppTheme.successGreen : AppTheme.cyanAccent,
+                    foregroundColor: AppTheme.bgDark,
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                )
-              else
-                ElevatedButton.icon(
-                  onPressed: () => _submitExam(),
-                  icon: const Icon(Icons.check, size: 16),
-                  label: const Text('Selesai'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF059669),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Text(
+                    isLast ? 'Kumpulkan' : 'Selanjutnya >',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                 ),
+              ),
             ],
           ),
         ),

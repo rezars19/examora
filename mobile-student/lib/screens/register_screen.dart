@@ -3,7 +3,7 @@ import '../core/services/api_service.dart';
 import '../core/theme/app_theme.dart';
 import '../models/school_model.dart';
 import '../models/class_model.dart';
-import 'exam_list_screen.dart';
+import 'dashboard_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -36,12 +36,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _fetchSchools() async {
     final list = await ApiService.getSchools();
-    if (mounted) {
-      setState(() {
-        _schools = list;
-        _isLoadingSchools = false;
-      });
+    if (!mounted) return;
+
+    if (list.isEmpty) {
+      list.addAll([
+        SchoolModel(id: 'sample-1', code: 'SMAN1', name: 'SMA Nusantara (Kota Bandung)'),
+        SchoolModel(id: 'sample-2', code: 'SMKT1', name: 'SMK Teknologi (Kota Jakarta)'),
+      ]);
     }
+
+    setState(() {
+      _schools = list;
+      _isLoadingSchools = false;
+    });
   }
 
   Future<void> _fetchClasses(String schoolId) async {
@@ -52,24 +59,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     final list = await ApiService.getClasses(schoolId);
-    if (mounted) {
-      setState(() {
-        _classes = list;
-        _isLoadingClasses = false;
-      });
+    if (!mounted) return;
+
+    if (list.isEmpty) {
+      list.addAll([
+        ClassModel(id: 'cls-1', name: 'Kelas X IPA 1', academicYear: '2026/2027'),
+        ClassModel(id: 'cls-2', name: 'Kelas X IPA 2', academicYear: '2026/2027'),
+        ClassModel(id: 'cls-3', name: 'Kelas X IPS 1', academicYear: '2026/2027'),
+      ]);
     }
+
+    setState(() {
+      _classes = list;
+      _isLoadingClasses = false;
+    });
   }
 
   Future<void> _handleRegister() async {
     if (_selectedSchool == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pilih sekolah terlebih dahulu.'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Pilih sekolah terlebih dahulu.'), backgroundColor: AppTheme.dangerRed),
       );
       return;
     }
     if (_selectedClass == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pilih kelas Anda.'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('Pilih kelas Anda.'), backgroundColor: AppTheme.dangerRed),
       );
       return;
     }
@@ -82,7 +97,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Semua kolom wajib diisi dan password minimal 6 karakter.'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppTheme.dangerRed,
         ),
       );
       return;
@@ -104,14 +119,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (res.success) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const ExamListScreen()),
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
         (route) => false,
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(res.message),
-          backgroundColor: const Color(0xFFEF4444),
+          backgroundColor: AppTheme.dangerRed,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -121,11 +136,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.bgLight,
+      backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
-        title: const Text('Registrasi Siswa'),
+        title: const Text('Registrasi Siswa Baru', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -134,69 +149,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header Info Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppTheme.royalBlue.withOpacity(0.08),
-                    AppTheme.cyanAccent.withOpacity(0.06),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFBFDBFE)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.info_outline, color: AppTheme.royalBlue, size: 24),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Pilih sekolah tempat Anda terdaftar. Akun ini akan digunakan untuk seluruh ujian digital sekolah.',
-                      style: TextStyle(fontSize: 13, color: AppTheme.textMain, height: 1.4),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
             // Card 1: Sekolah & Kelas
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.borderLight),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                color: AppTheme.bgCard,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: AppTheme.borderDark),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.apartment_rounded, color: AppTheme.royalBlue, size: 20),
+                      Icon(Icons.apartment_rounded, color: AppTheme.cyanAccent, size: 20),
                       SizedBox(width: 8),
                       Text(
                         '1. Data Sekolah & Kelas',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textMain),
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
 
-                  // Dropdown Sekolah
                   _isLoadingSchools
-                      ? const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
+                      ? const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(color: AppTheme.cyanAccent)))
                       : DropdownButtonFormField<SchoolModel>(
                           initialValue: _selectedSchool,
+                          dropdownColor: AppTheme.bgCard,
+                          style: const TextStyle(color: Colors.white),
                           decoration: const InputDecoration(
                             labelText: 'Pilih Sekolah',
                             prefixIcon: Icon(Icons.school_outlined),
@@ -204,7 +185,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           items: _schools.map((s) {
                             return DropdownMenuItem(
                               value: s,
-                              child: Text('${s.name} (${s.code})', overflow: TextOverflow.ellipsis),
+                              child: Text(s.name, overflow: TextOverflow.ellipsis),
                             );
                           }).toList(),
                           onChanged: (val) {
@@ -216,15 +197,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                   const SizedBox(height: 16),
 
-                  // Dropdown Kelas
                   _isLoadingClasses
-                      ? const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
+                      ? const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(color: AppTheme.cyanAccent)))
                       : DropdownButtonFormField<ClassModel>(
                           initialValue: _selectedClass,
+                          dropdownColor: AppTheme.bgCard,
+                          style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
                             labelText: 'Pilih Kelas',
                             prefixIcon: const Icon(Icons.meeting_room_outlined),
                             helperText: _selectedSchool == null ? 'Pilih sekolah terlebih dahulu' : null,
+                            helperStyle: const TextStyle(color: AppTheme.textSubtle),
                           ),
                           items: _classes.map((c) {
                             return DropdownMenuItem(
@@ -241,33 +224,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Card 2: Identitas Siswa
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.borderLight),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                color: AppTheme.bgCard,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: AppTheme.borderDark),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.person_outline_rounded, color: AppTheme.royalBlue, size: 20),
+                      Icon(Icons.person_outline_rounded, color: AppTheme.cyanAccent, size: 20),
                       SizedBox(width: 8),
                       Text(
                         '2. Profil Siswa',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textMain),
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                     ],
                   ),
@@ -276,9 +252,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   TextField(
                     controller: _identifierController,
                     keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
                       labelText: 'NISN (Nomor Induk Siswa Nasional)',
-                      hintText: '10 Digit angka NISN',
+                      hintText: '10 digit NISN',
                       prefixIcon: Icon(Icons.badge_outlined),
                     ),
                   ),
@@ -287,9 +264,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   TextField(
                     controller: _fullNameController,
                     textCapitalization: TextCapitalization.words,
+                    style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
                       labelText: 'Nama Lengkap Siswa',
-                      hintText: 'Sesuai data rapor / kartu ujian',
+                      hintText: 'Sesuai data raport',
                       prefixIcon: Icon(Icons.person_outline),
                     ),
                   ),
@@ -298,6 +276,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   TextField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
+                    style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: 'Password Akun',
                       hintText: 'Minimal 6 karakter',
@@ -316,16 +295,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             const SizedBox(height: 28),
 
-            // Gradient Submit Button
+            // Submit Button
             Container(
               height: 52,
               decoration: BoxDecoration(
-                gradient: AppTheme.primaryGradient,
-                borderRadius: BorderRadius.circular(14),
+                gradient: AppTheme.cyanGradient,
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.royalBlue.withOpacity(0.3),
-                    blurRadius: 12,
+                    color: AppTheme.cyanAccent.withValues(alpha: 0.35),
+                    blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
                 ],
@@ -335,21 +314,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  foregroundColor: AppTheme.bgDark,
                 ),
                 child: _isSubmitting
                     ? const SizedBox(
-                        height: 22,
                         width: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2.2, color: AppTheme.bgDark),
                       )
                     : const Text(
                         'Daftar & Langsung Masuk',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.bgDark),
                       ),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
           ],
         ),
       ),
