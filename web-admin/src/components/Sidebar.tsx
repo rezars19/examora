@@ -12,6 +12,7 @@ import {
   LogOut,
   ShieldCheck,
   School as SchoolIcon,
+  BookOpen,
 } from 'lucide-react';
 import logoImg from '../assets/logo.png';
 
@@ -35,6 +36,7 @@ export const Sidebar: React.FC = () => {
     if (user?.role === 'SCHOOL_ADMIN') {
       return [
         { to: '/school/dashboard', label: 'Dashboard Sekolah', icon: LayoutDashboard },
+        { to: '/school/subjects', label: 'Mata Pelajaran', icon: BookOpen },
         { to: '/school/classes', label: 'Manajemen Kelas', icon: GraduationCap },
         { to: '/school/teachers', label: 'Manajemen Guru', icon: Users },
       ];

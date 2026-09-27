@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { GraduationCap, Users, ArrowRight, Building2, Sparkles } from 'lucide-react';
+import { GraduationCap, Users, ArrowRight, Building2, Sparkles, BookOpen } from 'lucide-react';
 
 export const SchoolDashboard: React.FC = () => {
   const { user, school } = useAuth();
@@ -23,9 +23,26 @@ export const SchoolDashboard: React.FC = () => {
       </div>
 
       {/* Action Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="p-6 rounded-2xl bg-[#0E1424] border border-[#222F4C] hover:border-[#00E5FF]/40 transition space-y-4">
           <div className="w-12 h-12 rounded-xl bg-cyan-400/10 border border-cyan-400/30 text-cyan-400 flex items-center justify-center">
+            <BookOpen size={24} />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-white">Mata Pelajaran</h3>
+            <p className="text-xs text-slate-400 mt-1">Daftar kurikulum resmi sekolah (Matematika, IPA, dll). Guru memilih dari sini.</p>
+          </div>
+          <Link
+            to="/school/subjects"
+            className="inline-flex items-center gap-2 text-xs font-bold text-[#00E5FF] hover:underline"
+          >
+            <span>Kelola Mapel</span>
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+
+        <div className="p-6 rounded-2xl bg-[#0E1424] border border-[#222F4C] hover:border-[#00E5FF]/40 transition space-y-4">
+          <div className="w-12 h-12 rounded-xl bg-blue-400/10 border border-blue-400/30 text-blue-400 flex items-center justify-center">
             <GraduationCap size={24} />
           </div>
           <div>
@@ -42,7 +59,7 @@ export const SchoolDashboard: React.FC = () => {
         </div>
 
         <div className="p-6 rounded-2xl bg-[#0E1424] border border-[#222F4C] hover:border-[#00E5FF]/40 transition space-y-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-400/10 border border-blue-400/30 text-blue-400 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-emerald-400/10 border border-emerald-400/30 text-emerald-400 flex items-center justify-center">
             <Users size={24} />
           </div>
           <div>

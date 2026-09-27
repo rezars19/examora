@@ -9,6 +9,7 @@ import { SuperAdminDashboard } from './pages/superadmin/SuperAdminDashboard';
 import { SchoolsManagement } from './pages/superadmin/SchoolsManagement';
 
 import { SchoolDashboard } from './pages/school/SchoolDashboard';
+import { SubjectsManagement } from './pages/school/SubjectsManagement';
 import { ClassesManagement } from './pages/school/ClassesManagement';
 import { TeachersManagement } from './pages/school/TeachersManagement';
 
@@ -76,6 +77,7 @@ export const App: React.FC = () => {
 
             {/* School Admin Routes */}
             <Route path="/school/dashboard" element={<SchoolDashboard />} />
+            <Route path="/school/subjects" element={<SubjectsManagement />} />
             <Route path="/school/classes" element={<ClassesManagement />} />
             <Route path="/school/teachers" element={<TeachersManagement />} />
 

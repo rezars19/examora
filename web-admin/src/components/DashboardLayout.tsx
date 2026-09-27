@@ -10,6 +10,7 @@ export const DashboardLayout: React.FC = () => {
     const path = location.pathname;
     if (path.includes('/superadmin/schools')) return 'Approval & Manajemen Sekolah';
     if (path.includes('/superadmin/dashboard')) return 'Statistik & Ringkasan Platform';
+    if (path.includes('/school/subjects')) return 'Master Mata Pelajaran Sekolah';
     if (path.includes('/school/classes')) return 'Manajemen Kelas & Tahun Ajaran';
     if (path.includes('/school/teachers')) return 'Manajemen Akun Guru';
     if (path.includes('/school/dashboard')) return 'Dashboard Admin Sekolah';
