@@ -8,15 +8,18 @@ import {
   GraduationCap,
   FileQuestion,
   CalendarCheck,
-  BarChart3,
   LogOut,
-  ShieldCheck,
   School as SchoolIcon,
   BookOpen,
+  X,
 } from 'lucide-react';
 import logoImg from '../assets/logo.png';
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+  onCloseMobile?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ onCloseMobile }) => {
   const { user, school, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -56,33 +59,42 @@ export const Sidebar: React.FC = () => {
   const links = getLinks();
 
   return (
-    <aside className="w-64 bg-[#0E1424] border-r border-[#222F4C] flex flex-col justify-between shrink-0">
-      <div>
+    <aside className="w-64 dark:bg-[#0E1424] bg-white border-r dark:border-[#222F4C] border-slate-200 flex flex-col justify-between shrink-0 h-full transition-colors">
+      <div className="overflow-y-auto">
         {/* Brand Header */}
-        <div className="p-6 flex items-center gap-3 border-b border-[#222F4C]">
-          <div className="relative">
-            <div className="absolute inset-0 bg-[#00E5FF] blur-md opacity-30 rounded-full"></div>
-            <img src={logoImg} alt="Examora" className="w-10 h-10 relative object-contain" />
+        <div className="p-5 flex items-center justify-between border-b dark:border-[#222F4C] border-slate-200">
+          <div className="flex items-center gap-3">
+            <img src={logoImg} alt="Examora" className="w-9 h-9 object-contain" />
+            <div>
+              <h1 className="font-extrabold text-lg tracking-tight dark:text-white text-slate-900">
+                Examora
+              </h1>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                {user?.role === 'SUPERADMIN' ? 'Super Admin' : user?.role === 'SCHOOL_ADMIN' ? 'School Admin' : 'Portal Guru'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-cyan-200 to-[#00E5FF] bg-clip-text text-transparent">
-              Examora
-            </h1>
-            <p className="text-[11px] text-slate-400 font-medium tracking-wide">
-              {user?.role === 'SUPERADMIN' ? 'SUPER PORTAL' : 'EXAM PORTAL'}
-            </p>
-          </div>
+
+          {/* Close button for mobile drawer */}
+          {onCloseMobile && (
+            <button
+              onClick={onCloseMobile}
+              className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
 
-        {/* Current Tenant / School Badge */}
+        {/* Current Tenant Badge */}
         {school && (
-          <div className="px-5 py-4 mx-3 my-3 bg-[#141C30] rounded-xl border border-[#222F4C]/80 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#1A243D] flex items-center justify-center text-[#00E5FF]">
-              <SchoolIcon size={18} />
+          <div className="px-4 py-3 mx-3 my-3 dark:bg-[#141C30] bg-slate-100 rounded-xl border dark:border-[#222F4C] border-slate-200 flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg dark:bg-[#1A243D] bg-white flex items-center justify-center text-cyan-600 dark:text-[#00E5FF] shadow-sm">
+              <SchoolIcon size={16} />
             </div>
             <div className="overflow-hidden">
-              <p className="text-xs font-semibold text-white truncate">{school.name}</p>
-              <p className="text-[10px] text-cyan-400 font-mono">#{school.code}</p>
+              <p className="text-xs font-bold dark:text-white text-slate-800 truncate">{school.name}</p>
+              <p className="text-[10px] text-cyan-600 dark:text-cyan-400 font-mono font-bold">#{school.code}</p>
             </div>
           </div>
         )}
@@ -95,15 +107,16 @@ export const Sidebar: React.FC = () => {
               <NavLink
                 key={item.to}
                 to={item.to}
+                onClick={onCloseMobile}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                  `flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors ${
                     isActive
-                      ? 'bg-gradient-to-r from-[#00E5FF]/20 to-[#0284C7]/10 text-[#00E5FF] border border-[#00E5FF]/30 shadow-[0_0_15px_rgba(0,229,255,0.15)]'
-                      : 'text-slate-400 hover:text-white hover:bg-[#141C30]'
+                      ? 'dark:bg-[#00E5FF]/15 bg-cyan-500/10 text-cyan-700 dark:text-[#00E5FF] border dark:border-[#00E5FF]/30 border-cyan-500/30'
+                      : 'text-slate-600 dark:text-slate-400 hover:dark:text-white hover:text-slate-900 dark:hover:bg-[#141C30] hover:bg-slate-100'
                   }`
                 }
               >
-                <Icon size={18} />
+                <Icon size={17} />
                 <span>{item.label}</span>
               </NavLink>
             );
@@ -112,21 +125,21 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Footer Profile & Logout */}
-      <div className="p-4 border-t border-[#222F4C]">
-        <div className="flex items-center justify-between p-3 rounded-xl bg-[#141C30] border border-[#222F4C]">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#00E5FF] to-[#1D4ED8] flex items-center justify-center font-bold text-[#080C15] shrink-0">
+      <div className="p-3 border-t dark:border-[#222F4C] border-slate-200">
+        <div className="flex items-center justify-between p-2.5 rounded-xl dark:bg-[#141C30] bg-slate-100 border dark:border-[#222F4C] border-slate-200">
+          <div className="flex items-center gap-2.5 overflow-hidden">
+            <div className="w-8 h-8 rounded-full bg-cyan-500 text-slate-900 flex items-center justify-center font-extrabold text-xs shrink-0">
               {user?.fullName ? user.fullName[0].toUpperCase() : 'U'}
             </div>
             <div className="overflow-hidden">
-              <p className="text-xs font-bold text-white truncate">{user?.fullName}</p>
-              <p className="text-[10px] text-slate-400 truncate">{user?.identifier}</p>
+              <p className="text-xs font-bold dark:text-white text-slate-800 truncate">{user?.fullName}</p>
+              <p className="text-[10px] text-slate-500 truncate">{user?.identifier}</p>
             </div>
           </div>
           <button
             onClick={handleLogout}
             title="Keluar"
-            className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition"
           >
             <LogOut size={16} />
           </button>

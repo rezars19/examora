@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { Login } from './pages/Login';
 import { RegisterSchool } from './pages/RegisterSchool';
 import { DashboardLayout } from './components/DashboardLayout';
@@ -56,41 +57,43 @@ const RootRedirect: React.FC = () => {
 
 export const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<RootRedirect />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register-school" element={<RegisterSchool />} />
+    <ThemeProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<RootRedirect />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register-school" element={<RegisterSchool />} />
 
-          {/* Protected Dashboard Layout */}
-          <Route
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            {/* Super Admin Routes */}
-            <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
-            <Route path="/superadmin/schools" element={<SchoolsManagement />} />
+            {/* Protected Dashboard Layout */}
+            <Route
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              {/* Super Admin Routes */}
+              <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
+              <Route path="/superadmin/schools" element={<SchoolsManagement />} />
 
-            {/* School Admin Routes */}
-            <Route path="/school/dashboard" element={<SchoolDashboard />} />
-            <Route path="/school/subjects" element={<SubjectsManagement />} />
-            <Route path="/school/classes" element={<ClassesManagement />} />
-            <Route path="/school/teachers" element={<TeachersManagement />} />
+              {/* School Admin Routes */}
+              <Route path="/school/dashboard" element={<SchoolDashboard />} />
+              <Route path="/school/subjects" element={<SubjectsManagement />} />
+              <Route path="/school/classes" element={<ClassesManagement />} />
+              <Route path="/school/teachers" element={<TeachersManagement />} />
 
-            {/* Teacher Routes */}
-            <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
-            <Route path="/teacher/question-banks" element={<QuestionBanks />} />
-            <Route path="/teacher/exams" element={<ExamsManagement />} />
-            <Route path="/teacher/exams/:id/recap" element={<ExamRecap />} />
-          </Route>
+              {/* Teacher Routes */}
+              <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+              <Route path="/teacher/question-banks" element={<QuestionBanks />} />
+              <Route path="/teacher/exams" element={<ExamsManagement />} />
+              <Route path="/teacher/exams/:id/recap" element={<ExamRecap />} />
+            </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </ThemeProvider>
   );
 };
