@@ -8,6 +8,8 @@ export interface TokenPayload {
   role: UserRole;
   identifier: string;
   fullName: string;
+  subjectId?: string | null;
+  subjectName?: string | null;
 }
 
 declare module 'fastify' {

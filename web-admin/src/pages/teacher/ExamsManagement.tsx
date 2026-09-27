@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
-import { CalendarCheck, Plus, Key, Shield, Clock, Users, ArrowRight, BarChart3, AlertCircle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { CalendarCheck, Plus, Key, Shield, Clock, Users, ArrowRight, BarChart3, AlertCircle, BookOpen } from 'lucide-react';
 
 export const ExamsManagement: React.FC = () => {
+  const { user } = useAuth();
   const [exams, setExams] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
@@ -11,7 +13,7 @@ export const ExamsManagement: React.FC = () => {
 
   // Create Modal
   const [showModal, setShowModal] = useState(false);
-  const [subjectId, setSubjectId] = useState('');
+  const [subjectId, setSubjectId] = useState(user?.subjectId || user?.subject?.id || '');
   const [title, setTitle] = useState('');
   const [durationMinutes, setDurationMinutes] = useState(60);
   const [startTime, setStartTime] = useState(new Date().toISOString().slice(0, 16));
@@ -243,15 +245,27 @@ export const ExamsManagement: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">Mata Pelajaran</label>
-                  <select
-                    value={subjectId}
-                    onChange={(e) => setSubjectId(e.target.value)}
-                    className="w-full px-4 py-2 bg-[#141C30] border border-[#222F4C] focus:border-[#00E5FF] rounded-xl text-xs text-white outline-none"
-                  >
-                    {subjects.map((s) => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
+                  {user?.subject ? (
+                    <div className="p-2.5 bg-[#141C30] border border-[#00E5FF]/40 rounded-xl flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-white font-bold text-xs truncate">
+                        <BookOpen size={14} className="text-[#00E5FF] shrink-0" />
+                        <span className="truncate">{user.subject.name}</span>
+                      </div>
+                      <span className="text-[9px] font-bold text-[#00E5FF] bg-[#00E5FF]/10 px-1.5 py-0.5 rounded shrink-0">
+                        Otomatis
+                      </span>
+                    </div>
+                  ) : (
+                    <select
+                      value={subjectId}
+                      onChange={(e) => setSubjectId(e.target.value)}
+                      className="w-full px-4 py-2 bg-[#141C30] border border-[#222F4C] focus:border-[#00E5FF] rounded-xl text-xs text-white outline-none"
+                    >
+                      {subjects.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">Durasi (Menit)</label>

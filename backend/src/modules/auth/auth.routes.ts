@@ -160,6 +160,7 @@ export async function authRoutes(fastify: FastifyInstance, options: FastifyPlugi
       },
       include: {
         school: true,
+        subject: true,
       },
     });
 
@@ -203,6 +204,8 @@ export async function authRoutes(fastify: FastifyInstance, options: FastifyPlugi
       role: user.role,
       identifier: user.identifier,
       fullName: user.fullName,
+      subjectId: user.subjectId,
+      subjectName: user.subject?.name,
     });
 
     return reply.send({
@@ -216,6 +219,8 @@ export async function authRoutes(fastify: FastifyInstance, options: FastifyPlugi
           role: user.role,
           identifier: user.identifier,
           fullName: user.fullName,
+          subjectId: user.subjectId,
+          subject: user.subject ? { id: user.subject.id, code: user.subject.code, name: user.subject.name } : null,
         },
         school: {
           id: user.school.id,
@@ -378,9 +383,17 @@ export async function authRoutes(fastify: FastifyInstance, options: FastifyPlugi
         select: {
           id: true,
           schoolId: true,
+          subjectId: true,
           role: true,
           identifier: true,
           fullName: true,
+          subject: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+            },
+          },
           school: {
             select: {
               id: true,

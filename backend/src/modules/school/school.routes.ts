@@ -118,6 +118,14 @@ export async function schoolRoutes(fastify: FastifyInstance, options: FastifyPlu
         id: true,
         identifier: true,
         fullName: true,
+        subjectId: true,
+        subject: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
         isActive: true,
         createdAt: true,
       },
@@ -134,6 +142,7 @@ export async function schoolRoutes(fastify: FastifyInstance, options: FastifyPlu
       identifier: z.string().min(2), // NIP / Email Guru
       fullName: z.string().min(2),
       password: z.string().min(6),
+      subjectId: z.string().uuid().optional().nullable(),
     });
 
     const parsed = schema.safeParse(request.body);
@@ -141,7 +150,7 @@ export async function schoolRoutes(fastify: FastifyInstance, options: FastifyPlu
       return reply.status(400).send({ success: false, message: 'Data guru tidak lengkap atau password kurang dari 6 karakter.' });
     }
 
-    const { identifier, fullName, password } = parsed.data;
+    const { identifier, fullName, password, subjectId } = parsed.data;
 
     const existing = await prisma.user.findFirst({
       where: { schoolId, identifier },
@@ -154,6 +163,7 @@ export async function schoolRoutes(fastify: FastifyInstance, options: FastifyPlu
     const teacher = await prisma.user.create({
       data: {
         schoolId,
+        subjectId: subjectId || undefined,
         role: UserRole.TEACHER,
         identifier,
         fullName,
@@ -164,6 +174,14 @@ export async function schoolRoutes(fastify: FastifyInstance, options: FastifyPlu
         id: true,
         identifier: true,
         fullName: true,
+        subjectId: true,
+        subject: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
         isActive: true,
       },
     });
@@ -190,6 +208,9 @@ export async function schoolRoutes(fastify: FastifyInstance, options: FastifyPlu
       return reply.status(400).send({ success: false, message: 'File Excel kosong atau format tidak sesuai.' });
     }
 
+    // Ambil daftar mapel sekolah untuk mapping otomatis
+    const schoolSubjects = await prisma.subject.findMany({ where: { schoolId } });
+
     const createdTeachers = [];
     const skipped = [];
 
@@ -197,6 +218,7 @@ export async function schoolRoutes(fastify: FastifyInstance, options: FastifyPlu
       const identifier = String(row['NIP'] || row['nip'] || row['Email'] || row['email'] || '').trim();
       const fullName = String(row['Nama'] || row['nama'] || row['FullName'] || '').trim();
       const password = String(row['Password'] || row['password'] || 'Guru12345').trim();
+      const mapelName = String(row['Mapel'] || row['mapel'] || row['Mata Pelajaran'] || row['mata_pelajaran'] || '').trim();
 
       if (!identifier || !fullName) {
         skipped.push({ row, reason: 'NIP atau Nama kosong' });
@@ -212,10 +234,22 @@ export async function schoolRoutes(fastify: FastifyInstance, options: FastifyPlu
         continue;
       }
 
+      // Cari ID Mapel jika ada
+      let matchedSubjectId: string | undefined;
+      if (mapelName) {
+        const found = schoolSubjects.find(
+          (s) =>
+            s.name.toLowerCase() === mapelName.toLowerCase() ||
+            s.code.toLowerCase() === mapelName.toLowerCase()
+        );
+        if (found) matchedSubjectId = found.id;
+      }
+
       const passwordHash = await bcrypt.hash(password, 10);
       const created = await prisma.user.create({
         data: {
           schoolId,
+          subjectId: matchedSubjectId,
           role: UserRole.TEACHER,
           identifier,
           fullName,

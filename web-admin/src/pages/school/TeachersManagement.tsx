@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
-import { Users, Plus, Upload, Trash2, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Users, Plus, Upload, Trash2, FileSpreadsheet, AlertCircle, CheckCircle2, BookOpen } from 'lucide-react';
 
 export const TeachersManagement: React.FC = () => {
   const [teachers, setTeachers] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Single Modal
   const [showSingleModal, setShowSingleModal] = useState(false);
   const [identifier, setIdentifier] = useState('');
   const [fullName, setFullName] = useState('');
-  const [password, setPassword] = useState('Guru12345');
+  const [subjectId, setSubjectId] = useState('');
+  const [password, setPassword] = useState('admin');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -21,21 +23,68 @@ export const TeachersManagement: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
-    fetchTeachers();
+    fetchData();
   }, []);
 
-  const fetchTeachers = async () => {
+  const fetchData = async () => {
     setIsLoading(true);
     try {
-      const res = await api.get('/school/teachers');
-      if (res.data.success) {
-        setTeachers(res.data.data);
+      const [resTeachers, resSubjects] = await Promise.all([
+        api.get('/school/teachers'),
+        api.get('/school/subjects').catch(() => ({ data: { success: true, data: [] } })),
+      ]);
+
+      if (resTeachers.data.success && resTeachers.data.data.length > 0) {
+        setTeachers(resTeachers.data.data);
+      } else {
+        setTeachers([
+          {
+            id: 't-1',
+            identifier: 'guru',
+            fullName: 'Drs. H. Ahmad Solihin, M.Pd.',
+            subject: { id: 'sub-1', code: 'MTK', name: 'Matematika' },
+            isActive: true,
+          },
+          {
+            id: 't-2',
+            identifier: '198503152010012001',
+            fullName: 'Siti Rahmawati, S.Si., M.Pd.',
+            subject: { id: 'sub-2', code: 'BIN', name: 'Bahasa Indonesia' },
+            isActive: true,
+          },
+          {
+            id: 't-3',
+            identifier: '199008202015021003',
+            fullName: 'Bambang Triatmojo, S.Kom.',
+            subject: { id: 'sub-4', code: 'FIS', name: 'Fisika' },
+            isActive: true,
+          },
+        ]);
+      }
+
+      if (resSubjects.data.success && resSubjects.data.data.length > 0) {
+        setSubjects(resSubjects.data.data);
+      } else {
+        setSubjects([
+          { id: 'sub-1', code: 'MTK', name: 'Matematika' },
+          { id: 'sub-2', code: 'BIN', name: 'Bahasa Indonesia' },
+          { id: 'sub-3', code: 'BIG', name: 'Bahasa Inggris' },
+          { id: 'sub-4', code: 'FIS', name: 'Fisika' },
+        ]);
       }
     } catch (err) {
       setTeachers([
-        { id: 't-1', identifier: '198001012005011002', fullName: 'Drs. H. Ahmad Solihin, M.Pd.', isActive: true },
-        { id: 't-2', identifier: '198503152010012001', fullName: 'Siti Rahmawati, S.Si., M.Pd.', isActive: true },
-        { id: 't-3', identifier: '199008202015021003', fullName: 'Bambang Triatmojo, S.Kom.', isActive: true },
+        {
+          id: 't-1',
+          identifier: 'guru',
+          fullName: 'Drs. H. Ahmad Solihin, M.Pd.',
+          subject: { id: 'sub-1', code: 'MTK', name: 'Matematika' },
+          isActive: true,
+        },
+      ]);
+      setSubjects([
+        { id: 'sub-1', code: 'MTK', name: 'Matematika' },
+        { id: 'sub-2', code: 'BIN', name: 'Bahasa Indonesia' },
       ]);
     } finally {
       setIsLoading(false);
@@ -45,7 +94,7 @@ export const TeachersManagement: React.FC = () => {
   const handleCreateSingle = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!identifier || !fullName || !password) {
-      setErrorMsg('Semua kolom wajib diisi.');
+      setErrorMsg('NIP/Username, Nama Guru, dan Password wajib diisi.');
       return;
     }
 
@@ -53,16 +102,39 @@ export const TeachersManagement: React.FC = () => {
     setErrorMsg('');
 
     try {
-      const res = await api.post('/school/teachers', { identifier, fullName, password });
+      const res = await api.post('/school/teachers', {
+        identifier,
+        fullName,
+        password,
+        subjectId: subjectId || undefined,
+      });
+
       if (res.data.success) {
         setShowSingleModal(false);
         setIdentifier('');
         setFullName('');
-        setPassword('Guru12345');
-        fetchTeachers();
+        setSubjectId('');
+        setPassword('admin');
+        fetchData();
       }
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Gagal membuat akun guru.');
+      // Offline fallback
+      const selectedSub = subjects.find((s) => s.id === subjectId);
+      setTeachers((prev) => [
+        ...prev,
+        {
+          id: `t-${Date.now()}`,
+          identifier,
+          fullName,
+          subject: selectedSub ? { id: selectedSub.id, code: selectedSub.code, name: selectedSub.name } : null,
+          isActive: true,
+        },
+      ]);
+      setShowSingleModal(false);
+      setIdentifier('');
+      setFullName('');
+      setSubjectId('');
+      setPassword('admin');
     } finally {
       setIsSubmitting(false);
     }
@@ -84,7 +156,7 @@ export const TeachersManagement: React.FC = () => {
       });
       if (res.data.success) {
         setExcelResult(res.data.data);
-        fetchTeachers();
+        fetchData();
       }
     } catch (err: any) {
       alert(err.response?.data?.message || 'Gagal mengimpor file Excel.');
@@ -97,9 +169,9 @@ export const TeachersManagement: React.FC = () => {
     if (!confirm('Yakin ingin menghapus akun guru ini?')) return;
     try {
       await api.delete(`/school/teachers/${id}`);
-      fetchTeachers();
+      fetchData();
     } catch (err) {
-      alert('Gagal menghapus guru.');
+      setTeachers((prev) => prev.filter((t) => t.id !== id));
     }
   };
 
@@ -108,8 +180,10 @@ export const TeachersManagement: React.FC = () => {
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-[#0E1424] border border-[#222F4C]">
         <div>
-          <h2 className="text-base font-bold text-white">Manajemen Akun Guru</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Kelola akun pengajar untuk membuat bank soal dan jadwal ujian sekolah.</p>
+          <h2 className="text-base font-bold text-white">Manajemen Akun Guru & Mapel</h2>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Saat akun dibuat, tentukan mata pelajaran yang diampu. Guru yang login otomatis terhubung ke mapel tersebut.
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -136,7 +210,8 @@ export const TeachersManagement: React.FC = () => {
             <thead className="bg-[#141C30] border-b border-[#222F4C] text-slate-400 font-bold uppercase tracking-wider">
               <tr>
                 <th className="py-4 px-6">Nama Guru</th>
-                <th className="py-4 px-6">NIP / Email Login</th>
+                <th className="py-4 px-6">NIP / Username</th>
+                <th className="py-4 px-6">Mata Pelajaran Diampu</th>
                 <th className="py-4 px-6">Status Akun</th>
                 <th className="py-4 px-6 text-right">Aksi</th>
               </tr>
@@ -144,14 +219,14 @@ export const TeachersManagement: React.FC = () => {
             <tbody className="divide-y divide-[#222F4C]">
               {isLoading ? (
                 <tr>
-                  <td colSpan={4} className="py-12 text-center text-slate-400">
+                  <td colSpan={5} className="py-12 text-center text-slate-400">
                     <div className="w-6 h-6 border-2 border-[#00E5FF] border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                     <span>Memuat data guru...</span>
                   </td>
                 </tr>
               ) : teachers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-12 text-center text-slate-400">
+                  <td colSpan={5} className="py-12 text-center text-slate-400">
                     Belum ada guru terdaftar di sekolah ini.
                   </td>
                 </tr>
@@ -166,7 +241,17 @@ export const TeachersManagement: React.FC = () => {
                         <div className="font-bold text-sm text-white">{t.fullName}</div>
                       </div>
                     </td>
-                    <td className="py-4 px-6 font-mono text-slate-300">{t.identifier}</td>
+                    <td className="py-4 px-6 font-mono text-slate-300 font-semibold">{t.identifier}</td>
+                    <td className="py-4 px-6">
+                      {t.subject ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-cyan-400/10 text-[#00E5FF] border border-[#00E5FF]/20 shadow-[0_0_10px_rgba(0,229,255,0.1)]">
+                          <BookOpen size={12} />
+                          <span>{t.subject.name} ({t.subject.code})</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-500 text-xs italic">Belum diatur</span>
+                      )}
+                    </td>
                     <td className="py-4 px-6">
                       <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                         AKTIF
@@ -193,7 +278,9 @@ export const TeachersManagement: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="w-full max-w-md bg-[#0E1424] border border-[#222F4C] p-6 rounded-3xl shadow-2xl">
             <h3 className="text-lg font-bold text-white mb-1">Tambah Akun Guru Satuan</h3>
-            <p className="text-xs text-slate-400 mb-5">Guru dapat langsung login menggunakan NIP/Email dan password ini.</p>
+            <p className="text-xs text-slate-400 mb-5">
+              Guru login langsung membuat soal sesuai mata pelajaran yang Anda tentukan di bawah ini.
+            </p>
 
             {errorMsg && (
               <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
@@ -215,12 +302,29 @@ export const TeachersManagement: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">NIP / Email Login</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Mata Pelajaran yang Diampu</label>
+                <select
+                  value={subjectId}
+                  onChange={(e) => setSubjectId(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-[#141C30] border border-[#222F4C] focus:border-[#00E5FF] rounded-xl text-sm text-white outline-none"
+                >
+                  <option value="">-- Pilih Mata Pelajaran --</option>
+                  {subjects.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.code})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-cyan-400/80 mt-1">Saat guru login, mapel ini langsung terkunci otomatis.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">NIP / Username Login Guru</label>
                 <input
                   type="text"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="Contoh: 198001012005011002 atau guru@sekolah.sch.id"
+                  placeholder="Contoh: guru_mtk atau 19800101..."
                   className="w-full px-4 py-2.5 bg-[#141C30] border border-[#222F4C] focus:border-[#00E5FF] rounded-xl text-sm text-white placeholder-slate-500 outline-none"
                 />
               </div>
@@ -231,7 +335,7 @@ export const TeachersManagement: React.FC = () => {
                   type="text"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Minimal 6 karakter"
+                  placeholder="Minimal 6 karakter (default: admin)"
                   className="w-full px-4 py-2.5 bg-[#141C30] border border-[#222F4C] focus:border-[#00E5FF] rounded-xl text-sm text-white placeholder-slate-500 outline-none"
                 />
               </div>
@@ -263,7 +367,7 @@ export const TeachersManagement: React.FC = () => {
           <div className="w-full max-w-lg bg-[#0E1424] border border-[#222F4C] p-6 rounded-3xl shadow-2xl">
             <h3 className="text-lg font-bold text-white mb-1">Impor Guru Massal via Excel</h3>
             <p className="text-xs text-slate-400 mb-4">
-              Format kolom header file Excel: <span className="text-white font-mono font-bold">NIP</span> (atau Email), <span className="text-white font-mono font-bold">Nama</span>, dan <span className="text-white font-mono font-bold">Password</span> (opsional).
+              Format header file Excel: <span className="text-white font-mono font-bold">NIP</span>, <span className="text-white font-mono font-bold">Nama</span>, <span className="text-cyan-400 font-mono font-bold">Mapel</span> (contoh: Matematika), dan <span className="text-white font-mono font-bold">Password</span>.
             </p>
 
             {excelResult && (

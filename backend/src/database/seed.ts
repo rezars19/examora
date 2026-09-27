@@ -96,7 +96,23 @@ export async function runSeed() {
     console.log(`✓ Akun Admin Sekolah Darul Ulum diperbarui: admin / admin`);
   }
 
-  // 4. Guru SMA Darul Ulum (Username: guru, Password: admin, Kode: DARULULUM)
+  // 4. Mata Pelajaran: Matematika
+  let subject = await prisma.subject.findFirst({
+    where: { schoolId: school.id, code: 'MTK' },
+  });
+
+  if (!subject) {
+    subject = await prisma.subject.create({
+      data: {
+        schoolId: school.id,
+        code: 'MTK',
+        name: 'Matematika',
+      },
+    });
+    console.log(`✓ Mapel Matematika dibuat: MTK - Matematika`);
+  }
+
+  // 5. Guru SMA Darul Ulum (Username: guru, Password: admin, Mapel: Matematika)
   let teacher = await prisma.user.findFirst({
     where: { schoolId: school.id, identifier: 'guru' },
   });
@@ -105,6 +121,7 @@ export async function runSeed() {
     teacher = await prisma.user.create({
       data: {
         schoolId: school.id,
+        subjectId: subject.id,
         role: UserRole.TEACHER,
         identifier: 'guru',
         passwordHash: defaultAdminPassHash,
@@ -112,16 +129,20 @@ export async function runSeed() {
         isActive: true,
       },
     });
-    console.log(`✓ Guru Darul Ulum dibuat: guru / admin`);
+    console.log(`✓ Guru Darul Ulum dibuat: guru / admin (Mapel: Matematika)`);
   } else {
     await prisma.user.update({
       where: { id: teacher.id },
-      data: { passwordHash: defaultAdminPassHash, role: UserRole.TEACHER },
+      data: {
+        passwordHash: defaultAdminPassHash,
+        role: UserRole.TEACHER,
+        subjectId: subject.id,
+      },
     });
-    console.log(`✓ Akun Guru Darul Ulum diperbarui: guru / admin`);
+    console.log(`✓ Akun Guru Darul Ulum diperbarui: guru / admin (Mapel: Matematika)`);
   }
 
-  // 5. Kelas: Kelas X IPA 1
+  // 6. Kelas: Kelas X IPA 1
   let targetClass = await prisma.class.findFirst({
     where: { schoolId: school.id, name: 'Kelas X IPA 1' },
   });
@@ -137,7 +158,7 @@ export async function runSeed() {
     console.log(`✓ Kelas X IPA 1 dibuat`);
   }
 
-  // 6. Akun Siswa (NISN: 123456, Password: solihin123)
+  // 7. Akun Siswa (NISN: 123456, Password: solihin123)
   const studentIdentifier = '123456';
   let student = await prisma.user.findFirst({
     where: { schoolId: school.id, identifier: studentIdentifier },
@@ -168,22 +189,6 @@ export async function runSeed() {
       data: { passwordHash: studentPassHash, fullName: 'Reza Riyadhusolihin' },
     });
     console.log(`✓ Akun Siswa diperbarui: NISN ${studentIdentifier} / solihin123`);
-  }
-
-  // 7. Mata Pelajaran: Matematika
-  let subject = await prisma.subject.findFirst({
-    where: { schoolId: school.id, code: 'MTK-10' },
-  });
-
-  if (!subject) {
-    subject = await prisma.subject.create({
-      data: {
-        schoolId: school.id,
-        code: 'MTK-10',
-        name: 'Matematika',
-      },
-    });
-    console.log(`✓ Mapel Matematika dibuat`);
   }
 
   // 8. Bank Soal & Butir Soal

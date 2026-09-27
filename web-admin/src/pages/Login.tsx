@@ -125,6 +125,12 @@ export const Login: React.FC = () => {
             role: 'TEACHER',
             identifier: 'guru',
             schoolId: 'darul-ulum',
+            subjectId: 'sub-1',
+            subject: {
+              id: 'sub-1',
+              code: 'MTK',
+              name: 'Matematika',
+            },
           },
           school: {
             id: 'darul-ulum',

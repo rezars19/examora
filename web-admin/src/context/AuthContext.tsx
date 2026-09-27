@@ -9,6 +9,12 @@ export interface User {
   role: UserRole;
   identifier: string;
   schoolId?: string | null;
+  subjectId?: string | null;
+  subject?: {
+    id: string;
+    code: string;
+    name: string;
+  } | null;
 }
 
 export interface School {
