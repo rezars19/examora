@@ -1,6 +1,6 @@
 class ApiConstants {
-  // Default URL backend VPS (bisa diubah siswa di halaman login jika perlu)
-  static String baseUrl = 'http://43.157.203.140:3000/api';
+  // URL backend domain resmi Examora
+  static String baseUrl = 'http://admin-examora.rzdigital.my.id/api';
 
   // Endpoints Auth
   static String get login => '$baseUrl/auth/login';
