@@ -1,6 +1,6 @@
 class ApiConstants {
   // Default URL backend VPS (bisa diubah siswa di halaman login jika perlu)
-  static String baseUrl = 'http://103.175.49.96:3000/api';
+  static String baseUrl = 'http://43.157.203.140:3000/api';
 
   // Endpoints Auth
   static String get login => '$baseUrl/auth/login';
