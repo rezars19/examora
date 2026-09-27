@@ -65,7 +65,7 @@ class QuestionNavSheet extends StatelessWidget {
                 final isCurrent = index == currentIndex;
 
                 Color bg = Colors.grey.shade200;
-                Color textColor = Colors.black800;
+                Color textColor = Colors.black87;
 
                 if (ans != null) {
                   if (ans.isDoubtful) {

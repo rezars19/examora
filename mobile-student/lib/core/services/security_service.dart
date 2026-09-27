@@ -9,8 +9,8 @@ class SecurityService {
       await _channel.invokeMethod('enableSecureScreen');
       await _channel.invokeMethod('enableKioskMode');
       return true;
-    } on PlatformException catch (e) {
-      print('Gagal mengaktifkan mode aman: ${e.message}');
+    } catch (e) {
+      print('Mode aman dilewati di platform ini (Web/Desktop): $e');
       return false;
     }
   }
@@ -21,8 +21,8 @@ class SecurityService {
       await _channel.invokeMethod('disableKioskMode');
       await _channel.invokeMethod('disableSecureScreen');
       return true;
-    } on PlatformException catch (e) {
-      print('Gagal menonaktifkan mode aman: ${e.message}');
+    } catch (e) {
+      print('Gagal menonaktifkan mode aman: $e');
       return false;
     }
   }
@@ -32,7 +32,7 @@ class SecurityService {
     try {
       final bool isActive = await _channel.invokeMethod('isKioskActive');
       return isActive;
-    } on PlatformException catch (_) {
+    } catch (_) {
       return false;
     }
   }
