@@ -29,9 +29,9 @@ class _LoginScreenState extends State<LoginScreen> {
     super.initState();
     _currentSchool = widget.selectedSchool ??
         SchoolModel(
-          id: 'default',
-          code: 'SMAN1',
-          name: 'SMA Nusantara',
+          id: 'darul-ulum',
+          code: 'DARULULUM',
+          name: 'SMA Darul Ulum',
         );
   }
 
@@ -115,14 +115,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   // School Badge Logo
                   Container(
-                    width: 68,
-                    height: 68,
+                    width: 72,
+                    height: 72,
+                    padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: AppTheme.bgCardLight,
                       border: Border.all(color: AppTheme.cyanAccent.withValues(alpha: 0.5), width: 1.5),
                     ),
-                    child: const Icon(Icons.school_rounded, color: AppTheme.cyanAccent, size: 36),
+                    child: _currentSchool.name.toLowerCase().contains('darul') || _currentSchool.code == 'DARULULUM'
+                        ? Image.asset('assets/images/darul_ulum.png', fit: BoxFit.contain)
+                        : const Icon(Icons.school_rounded, color: AppTheme.cyanAccent, size: 36),
                   ),
                   const SizedBox(height: 12),
 

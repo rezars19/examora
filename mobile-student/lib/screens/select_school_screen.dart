@@ -32,10 +32,17 @@ class _SelectSchoolScreenState extends State<SelectSchoolScreen> {
     // Tambahkan fallback sample jika API belum memiliki data awal
     if (list.isEmpty) {
       list.addAll([
+        SchoolModel(id: 'darul-ulum-id', code: 'DARULULUM', name: 'SMA Darul Ulum'),
         SchoolModel(id: 'sample-1', code: 'SMAN1', name: 'SMA Nusantara (Kota Bandung)'),
         SchoolModel(id: 'sample-2', code: 'SMKT1', name: 'SMK Teknologi (Kota Jakarta)'),
         SchoolModel(id: 'sample-3', code: 'SMPH1', name: 'SMP Harapan Bangsa (Kota Semarang)'),
       ]);
+    } else {
+      // Pastikan SMA Darul Ulum selalu ada di urutan teratas
+      final hasDarul = list.any((s) => s.code == 'DARULULUM');
+      if (!hasDarul) {
+        list.insert(0, SchoolModel(id: 'darul-ulum-id', code: 'DARULULUM', name: 'SMA Darul Ulum'));
+      }
     }
 
     setState(() {
@@ -211,16 +218,19 @@ class _SelectSchoolScreenState extends State<SelectSchoolScreen> {
                                   leading: Container(
                                     width: 44,
                                     height: 44,
+                                    padding: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
                                       color: AppTheme.bgCardLight,
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(color: AppTheme.borderDark),
                                     ),
-                                    child: const Icon(
-                                      Icons.school_rounded,
-                                      color: AppTheme.cyanAccent,
-                                      size: 24,
-                                    ),
+                                    child: school.name.toLowerCase().contains('darul') || school.code == 'DARULULUM'
+                                        ? Image.asset('assets/images/darul_ulum.png', fit: BoxFit.contain)
+                                        : const Icon(
+                                            Icons.school_rounded,
+                                            color: AppTheme.cyanAccent,
+                                            size: 24,
+                                          ),
                                   ),
                                   title: Text(
                                     school.name,

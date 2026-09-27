@@ -147,13 +147,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: AppTheme.borderDark),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.school_rounded, color: AppTheme.cyanAccent, size: 16),
-                              SizedBox(width: 8),
-                              Text(
-                                'SMA Nusantara (Bandung)',
+                              Image.asset('assets/images/darul_ulum.png', width: 18, height: 18, fit: BoxFit.contain),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'SMA Darul Ulum',
                                 style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
                               ),
                             ],

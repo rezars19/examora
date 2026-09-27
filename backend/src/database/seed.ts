@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole } from '@prisma/client';
+import { PrismaClient, QuestionType, SchoolStatus, UserRole, ExamStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 
@@ -7,39 +7,218 @@ dotenv.config();
 const prisma = new PrismaClient();
 
 export async function runSeed() {
-  const identifier = process.env.SUPERADMIN_IDENTIFIER || 'superadmin';
-  const password = process.env.SUPERADMIN_PASSWORD || 'AdminExamora2026!';
-  const fullName = process.env.SUPERADMIN_NAME || 'Super Administrator';
+  console.log('=== Memulai Seeding Data Examora ===');
 
-  console.log(`Checking superadmin user: ${identifier}...`);
+  // 1. Superadmin
+  const superIdentifier = process.env.SUPERADMIN_IDENTIFIER || 'superadmin';
+  const superPassword = process.env.SUPERADMIN_PASSWORD || 'AdminExamora2026!';
+  const superFullName = process.env.SUPERADMIN_NAME || 'Super Administrator Examora';
 
-  const existing = await prisma.user.findFirst({
-    where: {
-      role: UserRole.SUPERADMIN,
-      identifier: identifier,
-    },
+  let superadmin = await prisma.user.findFirst({
+    where: { role: UserRole.SUPERADMIN, identifier: superIdentifier },
   });
 
-  if (!existing) {
-    const passwordHash = await bcrypt.hash(password, 10);
-    const superadmin = await prisma.user.create({
+  if (!superadmin) {
+    const passwordHash = await bcrypt.hash(superPassword, 10);
+    superadmin = await prisma.user.create({
       data: {
         role: UserRole.SUPERADMIN,
-        identifier: identifier,
-        passwordHash: passwordHash,
-        fullName: fullName,
+        identifier: superIdentifier,
+        passwordHash,
+        fullName: superFullName,
         isActive: true,
       },
     });
-    console.log(`Superadmin created successfully! ID: ${superadmin.id}`);
-  } else {
-    console.log(`Superadmin already exists. Skipping.`);
+    console.log(`✓ Superadmin dibuat: ${superIdentifier}`);
   }
+
+  // 2. Sekolah: SMA Darul Ulum
+  let school = await prisma.school.findUnique({
+    where: { code: 'DARULULUM' },
+  });
+
+  if (!school) {
+    school = await prisma.school.create({
+      data: {
+        code: 'DARULULUM',
+        name: 'SMA Darul Ulum',
+        operatorName: 'Operator Darul Ulum',
+        email: 'info@darululum.sch.id',
+        phone: '08123456789',
+        status: SchoolStatus.ACTIVE,
+      },
+    });
+    console.log(`✓ Sekolah SMA Darul Ulum dibuat (ID: ${school.id})`);
+  }
+
+  // 3. Kelas: Kelas X IPA 1
+  let targetClass = await prisma.class.findFirst({
+    where: { schoolId: school.id, name: 'Kelas X IPA 1' },
+  });
+
+  if (!targetClass) {
+    targetClass = await prisma.class.create({
+      data: {
+        schoolId: school.id,
+        name: 'Kelas X IPA 1',
+        academicYear: '2026/2027',
+      },
+    });
+    console.log(`✓ Kelas X IPA 1 dibuat`);
+  }
+
+  // 4. Akun Siswa: NIP/NISN 123456, Password solihin123
+  const studentIdentifier = '123456';
+  const studentPassRaw = 'solihin123';
+  const studentHash = await bcrypt.hash(studentPassRaw, 10);
+
+  let student = await prisma.user.findFirst({
+    where: { schoolId: school.id, identifier: studentIdentifier },
+  });
+
+  if (!student) {
+    student = await prisma.user.create({
+      data: {
+        schoolId: school.id,
+        role: UserRole.STUDENT,
+        identifier: studentIdentifier,
+        passwordHash: studentHash,
+        fullName: 'Reza Riyadhusolihin',
+        isActive: true,
+      },
+    });
+
+    await prisma.studentClass.create({
+      data: {
+        studentId: student.id,
+        classId: targetClass.id,
+      },
+    });
+    console.log(`✓ Akun Siswa dibuat: NISN ${studentIdentifier} (Reza Riyadhusolihin)`);
+  } else {
+    // Update password jika sudah ada
+    await prisma.user.update({
+      where: { id: student.id },
+      data: { passwordHash: studentHash, fullName: 'Reza Riyadhusolihin' },
+    });
+    console.log(`✓ Akun Siswa diperbarui: NISN ${studentIdentifier}`);
+  }
+
+  // 5. Guru & Mata Pelajaran: Matematika
+  let subject = await prisma.subject.findFirst({
+    where: { schoolId: school.id, code: 'MTK-10' },
+  });
+
+  if (!subject) {
+    subject = await prisma.subject.create({
+      data: {
+        schoolId: school.id,
+        code: 'MTK-10',
+        name: 'Matematika',
+      },
+    });
+    console.log(`✓ Mapel Matematika dibuat`);
+  }
+
+  let teacher = await prisma.user.findFirst({
+    where: { schoolId: school.id, identifier: 'guru_mtk' },
+  });
+
+  if (!teacher) {
+    teacher = await prisma.user.create({
+      data: {
+        schoolId: school.id,
+        role: UserRole.TEACHER,
+        identifier: 'guru_mtk',
+        passwordHash: studentHash,
+        fullName: 'Drs. H. Ahmad Solihin, M.Pd.',
+        isActive: true,
+      },
+    });
+  }
+
+  // 6. Bank Soal & Butir Soal
+  let bank = await prisma.questionBank.findFirst({
+    where: { schoolId: school.id, subjectId: subject.id },
+  });
+
+  if (!bank) {
+    bank = await prisma.questionBank.create({
+      data: {
+        schoolId: school.id,
+        subjectId: subject.id,
+        createdById: teacher.id,
+        title: 'Bank Soal UTS Matematika Semester 1',
+        description: 'Kumpulan soal pilihan ganda dan essay UTS',
+      },
+    });
+
+    // Soal 1: Pilihan Ganda
+    await prisma.question.create({
+      data: {
+        bankId: bank.id,
+        type: QuestionType.SINGLE_CHOICE,
+        content: 'Perhatikan gambar berikut! Berapa luas daerah yang ditunjukkan pada segitiga siku-siku dengan alas 8 cm dan tinggi 8 cm?',
+        points: 50.0,
+        options: [
+          { id: 'A', text: '24 cm²', isCorrect: false },
+          { id: 'B', text: '32 cm²', isCorrect: true },
+          { id: 'C', text: '40 cm²', isCorrect: false },
+          { id: 'D', text: '48 cm²', isCorrect: false },
+        ],
+      },
+    });
+
+    // Soal 2: Essay
+    await prisma.question.create({
+      data: {
+        bankId: bank.id,
+        type: QuestionType.ESSAY,
+        content: 'Jelaskan rumus dan langkah pembuktian Teorema Pythagoras pada segitiga siku-siku!',
+        points: 50.0,
+      },
+    });
+    console.log(`✓ Soal ujian dibuat`);
+  }
+
+  // 7. Jadwal Ujian: Ujian Tengah Semester
+  let exam = await prisma.exam.findFirst({
+    where: { schoolId: school.id, token: 'EXM24' },
+  });
+
+  if (!exam) {
+    const now = new Date();
+    const endTime = new Date();
+    endTime.setDate(endTime.getDate() + 30); // Aktif 30 hari ke depan
+
+    exam = await prisma.exam.create({
+      data: {
+        schoolId: school.id,
+        subjectId: subject.id,
+        title: 'Ujian Tengah Semester',
+        description: 'Ujian Tengah Semester Ganjil Kelas X Matematika',
+        token: 'EXM24',
+        proctorPin: '123456',
+        durationMinutes: 60,
+        startTime: now,
+        endTime: endTime,
+        randomizeQuestions: true,
+        randomizeOptions: true,
+        status: ExamStatus.PUBLISHED,
+        examClasses: {
+          create: [{ classId: targetClass.id }],
+        },
+      },
+    });
+    console.log(`✓ Jadwal Ujian UTS Matematika dibuat (Token: EXM24, PIN: 123456)`);
+  }
+
+  console.log('=== Seeding Selesai Sukses! ===');
 }
 
 runSeed()
   .catch((e) => {
-    console.error('Error during seeding:', e);
+    console.error('Error seeding:', e);
     process.exit(1);
   })
   .finally(async () => {
