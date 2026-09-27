@@ -3,7 +3,7 @@ import axios from 'axios';
 // Gunakan URL VPS saat di dev lokal (5173), atau relative path '/api' saat di server port 80
 const isLocalDev = typeof window !== 'undefined' && window.location.hostname === 'localhost' && window.location.port === '5173';
 
-const DEFAULT_API_URL = isLocalDev ? 'http://admin-examora.rzdigital.my.id/api' : '/api';
+const DEFAULT_API_URL = isLocalDev ? 'http://43.157.203.140:3000/api' : '/api';
 
 export const API_URL = localStorage.getItem('examora_api_url') || DEFAULT_API_URL;
 
