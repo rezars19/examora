@@ -100,41 +100,43 @@ export async function authRoutes(fastify: FastifyInstance, options: FastifyPlugi
 
     const { identifier, password, schoolCode } = parsed.data;
 
-    // Cek kemungkinan Superadmin (identifier unik tanpa schoolId)
-    const superadmin = await prisma.user.findFirst({
-      where: {
-        role: UserRole.SUPERADMIN,
-        identifier,
-      },
-    });
-
-    if (superadmin) {
-      const validPass = await bcrypt.compare(password, superadmin.passwordHash);
-      if (!validPass) {
-        return reply.status(401).send({ success: false, message: 'Password salah.' });
-      }
-
-      const token = fastify.jwt.sign({
-        id: superadmin.id,
-        schoolId: null,
-        role: superadmin.role,
-        identifier: superadmin.identifier,
-        fullName: superadmin.fullName,
-      });
-
-      return reply.send({
-        success: true,
-        message: 'Login Super Admin berhasil.',
-        data: {
-          token,
-          user: {
-            id: superadmin.id,
-            fullName: superadmin.fullName,
-            role: superadmin.role,
-            identifier: superadmin.identifier,
-          },
+    // Cek kemungkinan Superadmin (jika tidak mengisi schoolCode atau login portal superadmin)
+    if (!schoolCode) {
+      const superadmin = await prisma.user.findFirst({
+        where: {
+          role: UserRole.SUPERADMIN,
+          identifier,
         },
       });
+
+      if (superadmin) {
+        const validPass = await bcrypt.compare(password, superadmin.passwordHash);
+        if (!validPass) {
+          return reply.status(401).send({ success: false, message: 'Password salah.' });
+        }
+
+        const token = fastify.jwt.sign({
+          id: superadmin.id,
+          schoolId: null,
+          role: superadmin.role,
+          identifier: superadmin.identifier,
+          fullName: superadmin.fullName,
+        });
+
+        return reply.send({
+          success: true,
+          message: 'Login Super Admin berhasil.',
+          data: {
+            token,
+            user: {
+              id: superadmin.id,
+              fullName: superadmin.fullName,
+              role: superadmin.role,
+              identifier: superadmin.identifier,
+            },
+          },
+        });
+      }
     }
 
     // Jika bukan superadmin, cari sekolah target

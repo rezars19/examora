@@ -2,23 +2,54 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, Lock, User, School, ArrowRight, Sparkles, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Lock, User, School, ArrowRight, Sparkles, AlertCircle, GraduationCap } from 'lucide-react';
 import logoImg from '../assets/logo.png';
 
+type LoginRoleTab = 'SUPERADMIN' | 'SCHOOL_ADMIN' | 'TEACHER';
+
 export const Login: React.FC = () => {
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
+  const [activeTab, setActiveTab] = useState<LoginRoleTab>('SUPERADMIN');
+
+  // Input states
+  const [identifier, setIdentifier] = useState('admin');
+  const [password, setPassword] = useState('admin');
   const [schoolCode, setSchoolCode] = useState('');
+
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  // Ubah tab dan set kredensial default yang mudah untuk testing
+  const switchTab = (tab: LoginRoleTab) => {
+    setActiveTab(tab);
+    setErrorMsg('');
+
+    if (tab === 'SUPERADMIN') {
+      setIdentifier('admin');
+      setPassword('admin');
+      setSchoolCode('');
+    } else if (tab === 'SCHOOL_ADMIN') {
+      setIdentifier('admin');
+      setPassword('admin');
+      setSchoolCode('DARULULUM');
+    } else if (tab === 'TEACHER') {
+      setIdentifier('guru');
+      setPassword('admin');
+      setSchoolCode('DARULULUM');
+    }
+  };
+
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!identifier || !password) {
-      setErrorMsg('Identifier/Username dan Password wajib diisi.');
+      setErrorMsg('Username / ID dan Password wajib diisi.');
+      return;
+    }
+
+    if (activeTab !== 'SUPERADMIN' && !schoolCode) {
+      setErrorMsg('Kode Sekolah wajib diisi untuk Admin Sekolah & Guru.');
       return;
     }
 
@@ -29,7 +60,7 @@ export const Login: React.FC = () => {
       const res = await api.post('/auth/login', {
         identifier,
         password,
-        schoolCode: schoolCode || undefined,
+        schoolCode: activeTab === 'SUPERADMIN' ? undefined : schoolCode,
       });
 
       if (res.data.success) {
@@ -46,49 +77,128 @@ export const Login: React.FC = () => {
         }
       }
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Login gagal. Periksa koneksi ke server VPS.');
+      setErrorMsg(err.response?.data?.message || 'Login gagal. Periksa username dan password.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Quick preset autofill helper
-  const setPreset = (id: string, pass: string, code: string = '') => {
-    setIdentifier(id);
-    setPassword(pass);
-    setSchoolCode(code);
-  };
-
   return (
     <div className="min-h-screen bg-[#080C15] flex flex-col justify-center items-center p-6 relative overflow-hidden">
       {/* Ambient background glows */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#00E5FF]/10 blur-[130px] rounded-full pointer-events-none"></div>
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-[#00E5FF]/10 blur-[140px] rounded-full pointer-events-none"></div>
       <div className="absolute bottom-10 right-10 w-[350px] h-[350px] bg-[#2563EB]/15 blur-[120px] rounded-full pointer-events-none"></div>
 
-      <div className="w-full max-w-md relative z-10">
+      <div className="w-full max-w-lg relative z-10">
         {/* Brand Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <div className="inline-block relative mb-3">
             <div className="absolute inset-0 bg-[#00E5FF] blur-xl opacity-40 rounded-full"></div>
             <img src={logoImg} alt="Examora Logo" className="w-20 h-20 relative mx-auto object-contain" />
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">Examora Admin</h1>
-          <p className="text-sm text-slate-400 mt-1">Platform Manajemen Ujian Digital Terpadu</p>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight">Portal Manajemen Examora</h1>
+          <p className="text-xs text-slate-400 mt-1">Pilih portal peran Anda untuk masuk ke sistem</p>
+        </div>
+
+        {/* 3 Tab Switcher */}
+        <div className="p-1.5 rounded-2xl bg-[#0E1424] border border-[#222F4C] grid grid-cols-3 gap-1.5 mb-5 shadow-lg">
+          <button
+            type="button"
+            onClick={() => switchTab('SUPERADMIN')}
+            className={`py-2.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+              activeTab === 'SUPERADMIN'
+                ? 'bg-gradient-to-r from-amber-500/20 to-amber-600/20 text-amber-400 border border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Sparkles size={14} className={activeTab === 'SUPERADMIN' ? 'text-amber-400' : ''} />
+            <span>Super Admin</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => switchTab('SCHOOL_ADMIN')}
+            className={`py-2.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+              activeTab === 'SCHOOL_ADMIN'
+                ? 'bg-gradient-to-r from-[#00E5FF]/20 to-[#0284C7]/20 text-[#00E5FF] border border-[#00E5FF]/40 shadow-[0_0_15px_rgba(0,229,255,0.2)]'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <School size={14} className={activeTab === 'SCHOOL_ADMIN' ? 'text-[#00E5FF]' : ''} />
+            <span>Admin Sekolah</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => switchTab('TEACHER')}
+            className={`py-2.5 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+              activeTab === 'TEACHER'
+                ? 'bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-400 border border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <GraduationCap size={14} className={activeTab === 'TEACHER' ? 'text-emerald-400' : ''} />
+            <span>Guru</span>
+          </button>
         </div>
 
         {/* Login Card */}
         <div className="bg-[#0E1424] border border-[#222F4C] p-8 rounded-3xl shadow-[0_10px_35px_rgba(0,0,0,0.5)]">
+          {/* Role Description Header */}
+          <div className="mb-6 pb-4 border-b border-[#222F4C]/80">
+            {activeTab === 'SUPERADMIN' && (
+              <div className="flex items-center gap-2.5 text-xs text-amber-400">
+                <Sparkles size={16} />
+                <span className="font-semibold">Login Pemilik Platform (Approval Sekolah & Kelola Sistem)</span>
+              </div>
+            )}
+            {activeTab === 'SCHOOL_ADMIN' && (
+              <div className="flex items-center gap-2.5 text-xs text-cyan-400">
+                <ShieldCheck size={16} />
+                <span className="font-semibold">Login Operator Sekolah (Kelola Kelas, Akun Guru & Siswa)</span>
+              </div>
+            )}
+            {activeTab === 'TEACHER' && (
+              <div className="flex items-center gap-2.5 text-xs text-emerald-400">
+                <GraduationCap size={16} />
+                <span className="font-semibold">Login Guru Pengampu (Bank Soal, Token Ujian & Rekap Nilai)</span>
+              </div>
+            )}
+          </div>
+
           {errorMsg && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-3">
+            <div className="mb-5 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-3">
               <AlertCircle size={16} className="shrink-0" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           <form onSubmit={handleLogin} className="space-y-4">
+            {/* Field Kode Sekolah (Hanya untuk Admin Sekolah & Guru) */}
+            {activeTab !== 'SUPERADMIN' && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Kode Sekolah / NPSN</label>
+                <div className="relative">
+                  <School size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type="text"
+                    value={schoolCode}
+                    onChange={(e) => setSchoolCode(e.target.value.toUpperCase())}
+                    placeholder="Contoh: DARULULUM"
+                    className="w-full pl-10 pr-4 py-3 bg-[#141C30] border border-[#222F4C] focus:border-[#00E5FF] rounded-xl text-sm text-white placeholder-slate-500 uppercase outline-none transition font-mono font-bold"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Field Username / Identifier */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Username / Email / NIP
+                {activeTab === 'SUPERADMIN'
+                  ? 'Username Super Admin'
+                  : activeTab === 'SCHOOL_ADMIN'
+                  ? 'Username / Email Admin Sekolah'
+                  : 'NIP / Username Guru'}
               </label>
               <div className="relative">
                 <User size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -96,12 +206,13 @@ export const Login: React.FC = () => {
                   type="text"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="Contoh: superadmin atau NIP guru"
-                  className="w-full pl-10 pr-4 py-3 bg-[#141C30] border border-[#222F4C] focus:border-[#00E5FF] focus:ring-1 focus:ring-[#00E5FF] rounded-xl text-sm text-white placeholder-slate-500 outline-none transition"
+                  placeholder="Masukkan username"
+                  className="w-full pl-10 pr-4 py-3 bg-[#141C30] border border-[#222F4C] focus:border-[#00E5FF] rounded-xl text-sm text-white placeholder-slate-500 outline-none transition font-medium"
                 />
               </div>
             </div>
 
+            {/* Field Password */}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">Password</label>
               <div className="relative">
@@ -111,64 +222,44 @@ export const Login: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-3 bg-[#141C30] border border-[#222F4C] focus:border-[#00E5FF] focus:ring-1 focus:ring-[#00E5FF] rounded-xl text-sm text-white placeholder-slate-500 outline-none transition"
+                  className="w-full pl-10 pr-4 py-3 bg-[#141C30] border border-[#222F4C] focus:border-[#00E5FF] rounded-xl text-sm text-white placeholder-slate-500 outline-none transition"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Kode Sekolah <span className="text-slate-500 font-normal">(Opsional jika Super Admin)</span>
-              </label>
-              <div className="relative">
-                <School size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input
-                  type="text"
-                  value={schoolCode}
-                  onChange={(e) => setSchoolCode(e.target.value.toUpperCase())}
-                  placeholder="Contoh: DARULULUM"
-                  className="w-full pl-10 pr-4 py-3 bg-[#141C30] border border-[#222F4C] focus:border-[#00E5FF] focus:ring-1 focus:ring-[#00E5FF] rounded-xl text-sm text-white placeholder-slate-500 uppercase outline-none transition"
-                />
-              </div>
-            </div>
-
+            {/* Button Submit */}
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-2 py-3.5 px-4 bg-gradient-to-r from-[#00E5FF] to-[#0284C7] hover:from-[#00cce6] hover:to-[#0274b0] text-[#080C15] font-extrabold text-sm rounded-xl transition shadow-[0_0_20px_rgba(0,229,255,0.3)] flex items-center justify-center gap-2"
+              className={`w-full mt-3 py-3.5 px-4 font-extrabold text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-lg ${
+                activeTab === 'SUPERADMIN'
+                  ? 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-[#080C15] shadow-amber-500/20'
+                  : activeTab === 'SCHOOL_ADMIN'
+                  ? 'bg-gradient-to-r from-[#00E5FF] to-[#0284C7] hover:from-[#00cce6] hover:to-[#0274b0] text-[#080C15] shadow-cyan-500/20'
+                  : 'bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-[#080C15] shadow-emerald-500/20'
+              }`}
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-[#080C15] border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 <>
-                  <span>Masuk Dashboard</span>
+                  <span>
+                    Masuk sebagai {activeTab === 'SUPERADMIN' ? 'Super Admin' : activeTab === 'SCHOOL_ADMIN' ? 'Admin Sekolah' : 'Guru'}
+                  </span>
                   <ArrowRight size={16} />
                 </>
               )}
             </button>
           </form>
 
-          {/* Quick presets for testing */}
-          <div className="mt-6 pt-5 border-t border-[#222F4C]">
-            <p className="text-[11px] text-slate-400 font-semibold mb-2.5 text-center">Akun Akses Cepat:</p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setPreset('superadmin', 'AdminExamora2026!')}
-                className="p-2 rounded-lg bg-[#141C30] hover:bg-[#1A243D] border border-[#222F4C] text-[11px] text-amber-400 font-bold flex items-center justify-center gap-1.5 transition"
-              >
-                <Sparkles size={12} />
-                Super Admin
-              </button>
-              <button
-                type="button"
-                onClick={() => setPreset('guru_mtk', 'solihin123', 'DARULULUM')}
-                className="p-2 rounded-lg bg-[#141C30] hover:bg-[#1A243D] border border-[#222F4C] text-[11px] text-cyan-400 font-bold flex items-center justify-center gap-1.5 transition"
-              >
-                <ShieldCheck size={12} />
-                Guru Darul Ulum
-              </button>
-            </div>
+          {/* Quick Info Box */}
+          <div className="mt-5 p-3 rounded-xl bg-[#141C30] border border-[#222F4C] text-[11px] text-slate-400 flex items-center justify-between">
+            <span>Akun Siap Uji:</span>
+            <span className="font-mono text-white font-bold">
+              {activeTab === 'SUPERADMIN' && 'admin / admin'}
+              {activeTab === 'SCHOOL_ADMIN' && 'admin / admin (DARULULUM)'}
+              {activeTab === 'TEACHER' && 'guru / admin (DARULULUM)'}
+            </span>
           </div>
         </div>
 
@@ -176,10 +267,10 @@ export const Login: React.FC = () => {
         <div className="text-center mt-6">
           <Link
             to="/register-school"
-            className="text-xs font-semibold text-slate-400 hover:text-[#00E5FF] transition flex items-center justify-center gap-1.5"
+            className="text-xs font-semibold text-slate-400 hover:text-[#00E5FF] transition inline-flex items-center gap-1.5"
           >
-            <span>Sekolah Anda belum terdaftar?</span>
-            <span className="text-[#00E5FF] underline">Daftarkan Sekolah Baru</span>
+            <span>Sekolah Anda belum terdaftar di Examora?</span>
+            <span className="text-[#00E5FF] underline font-bold">Daftar Mandiri</span>
           </Link>
         </div>
       </div>

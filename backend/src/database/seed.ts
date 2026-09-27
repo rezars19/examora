@@ -9,27 +9,47 @@ const prisma = new PrismaClient();
 export async function runSeed() {
   console.log('=== Memulai Seeding Data Examora ===');
 
-  // 1. Superadmin
-  const superIdentifier = process.env.SUPERADMIN_IDENTIFIER || 'superadmin';
-  const superPassword = process.env.SUPERADMIN_PASSWORD || 'AdminExamora2026!';
-  const superFullName = process.env.SUPERADMIN_NAME || 'Super Administrator Examora';
+  const defaultAdminPassHash = await bcrypt.hash('admin', 10);
+  const studentPassHash = await bcrypt.hash('solihin123', 10);
 
+  // 1. Super Admin (Username: admin, Password: admin)
   let superadmin = await prisma.user.findFirst({
-    where: { role: UserRole.SUPERADMIN, identifier: superIdentifier },
+    where: { role: UserRole.SUPERADMIN, identifier: 'admin' },
   });
 
   if (!superadmin) {
-    const passwordHash = await bcrypt.hash(superPassword, 10);
     superadmin = await prisma.user.create({
       data: {
         role: UserRole.SUPERADMIN,
-        identifier: superIdentifier,
-        passwordHash,
-        fullName: superFullName,
+        identifier: 'admin',
+        passwordHash: defaultAdminPassHash,
+        fullName: 'Super Administrator Examora',
         isActive: true,
       },
     });
-    console.log(`✓ Superadmin dibuat: ${superIdentifier}`);
+    console.log(`✓ Super Admin dibuat: admin / admin`);
+  } else {
+    await prisma.user.update({
+      where: { id: superadmin.id },
+      data: { passwordHash: defaultAdminPassHash },
+    });
+    console.log(`✓ Password Super Admin 'admin' diperbarui menjadi: admin`);
+  }
+
+  // Backup superadmin identifier
+  let superadminLegacy = await prisma.user.findFirst({
+    where: { role: UserRole.SUPERADMIN, identifier: 'superadmin' },
+  });
+  if (!superadminLegacy) {
+    await prisma.user.create({
+      data: {
+        role: UserRole.SUPERADMIN,
+        identifier: 'superadmin',
+        passwordHash: defaultAdminPassHash,
+        fullName: 'Super Administrator Examora (Backup)',
+        isActive: true,
+      },
+    });
   }
 
   // 2. Sekolah: SMA Darul Ulum
@@ -48,10 +68,60 @@ export async function runSeed() {
         status: SchoolStatus.ACTIVE,
       },
     });
-    console.log(`✓ Sekolah SMA Darul Ulum dibuat (ID: ${school.id})`);
+    console.log(`✓ Sekolah SMA Darul Ulum dibuat (Kode: DARULULUM)`);
   }
 
-  // 3. Kelas: Kelas X IPA 1
+  // 3. Admin Sekolah SMA Darul Ulum (Username: admin, Password: admin, Kode: DARULULUM)
+  let schoolAdmin = await prisma.user.findFirst({
+    where: { schoolId: school.id, identifier: 'admin' },
+  });
+
+  if (!schoolAdmin) {
+    schoolAdmin = await prisma.user.create({
+      data: {
+        schoolId: school.id,
+        role: UserRole.SCHOOL_ADMIN,
+        identifier: 'admin',
+        passwordHash: defaultAdminPassHash,
+        fullName: 'Admin Sekolah SMA Darul Ulum',
+        isActive: true,
+      },
+    });
+    console.log(`✓ Admin Sekolah Darul Ulum dibuat: admin / admin`);
+  } else {
+    await prisma.user.update({
+      where: { id: schoolAdmin.id },
+      data: { passwordHash: defaultAdminPassHash, role: UserRole.SCHOOL_ADMIN },
+    });
+    console.log(`✓ Akun Admin Sekolah Darul Ulum diperbarui: admin / admin`);
+  }
+
+  // 4. Guru SMA Darul Ulum (Username: guru, Password: admin, Kode: DARULULUM)
+  let teacher = await prisma.user.findFirst({
+    where: { schoolId: school.id, identifier: 'guru' },
+  });
+
+  if (!teacher) {
+    teacher = await prisma.user.create({
+      data: {
+        schoolId: school.id,
+        role: UserRole.TEACHER,
+        identifier: 'guru',
+        passwordHash: defaultAdminPassHash,
+        fullName: 'Drs. H. Ahmad Solihin, M.Pd.',
+        isActive: true,
+      },
+    });
+    console.log(`✓ Guru Darul Ulum dibuat: guru / admin`);
+  } else {
+    await prisma.user.update({
+      where: { id: teacher.id },
+      data: { passwordHash: defaultAdminPassHash, role: UserRole.TEACHER },
+    });
+    console.log(`✓ Akun Guru Darul Ulum diperbarui: guru / admin`);
+  }
+
+  // 5. Kelas: Kelas X IPA 1
   let targetClass = await prisma.class.findFirst({
     where: { schoolId: school.id, name: 'Kelas X IPA 1' },
   });
@@ -67,11 +137,8 @@ export async function runSeed() {
     console.log(`✓ Kelas X IPA 1 dibuat`);
   }
 
-  // 4. Akun Siswa: NIP/NISN 123456, Password solihin123
+  // 6. Akun Siswa (NISN: 123456, Password: solihin123)
   const studentIdentifier = '123456';
-  const studentPassRaw = 'solihin123';
-  const studentHash = await bcrypt.hash(studentPassRaw, 10);
-
   let student = await prisma.user.findFirst({
     where: { schoolId: school.id, identifier: studentIdentifier },
   });
@@ -82,7 +149,7 @@ export async function runSeed() {
         schoolId: school.id,
         role: UserRole.STUDENT,
         identifier: studentIdentifier,
-        passwordHash: studentHash,
+        passwordHash: studentPassHash,
         fullName: 'Reza Riyadhusolihin',
         isActive: true,
       },
@@ -94,17 +161,16 @@ export async function runSeed() {
         classId: targetClass.id,
       },
     });
-    console.log(`✓ Akun Siswa dibuat: NISN ${studentIdentifier} (Reza Riyadhusolihin)`);
+    console.log(`✓ Akun Siswa dibuat: NISN ${studentIdentifier} / solihin123`);
   } else {
-    // Update password jika sudah ada
     await prisma.user.update({
       where: { id: student.id },
-      data: { passwordHash: studentHash, fullName: 'Reza Riyadhusolihin' },
+      data: { passwordHash: studentPassHash, fullName: 'Reza Riyadhusolihin' },
     });
-    console.log(`✓ Akun Siswa diperbarui: NISN ${studentIdentifier}`);
+    console.log(`✓ Akun Siswa diperbarui: NISN ${studentIdentifier} / solihin123`);
   }
 
-  // 5. Guru & Mata Pelajaran: Matematika
+  // 7. Mata Pelajaran: Matematika
   let subject = await prisma.subject.findFirst({
     where: { schoolId: school.id, code: 'MTK-10' },
   });
@@ -120,24 +186,7 @@ export async function runSeed() {
     console.log(`✓ Mapel Matematika dibuat`);
   }
 
-  let teacher = await prisma.user.findFirst({
-    where: { schoolId: school.id, identifier: 'guru_mtk' },
-  });
-
-  if (!teacher) {
-    teacher = await prisma.user.create({
-      data: {
-        schoolId: school.id,
-        role: UserRole.TEACHER,
-        identifier: 'guru_mtk',
-        passwordHash: studentHash,
-        fullName: 'Drs. H. Ahmad Solihin, M.Pd.',
-        isActive: true,
-      },
-    });
-  }
-
-  // 6. Bank Soal & Butir Soal
+  // 8. Bank Soal & Butir Soal
   let bank = await prisma.questionBank.findFirst({
     where: { schoolId: school.id, subjectId: subject.id },
   });
@@ -153,7 +202,6 @@ export async function runSeed() {
       },
     });
 
-    // Soal 1: Pilihan Ganda
     await prisma.question.create({
       data: {
         bankId: bank.id,
@@ -169,7 +217,6 @@ export async function runSeed() {
       },
     });
 
-    // Soal 2: Essay
     await prisma.question.create({
       data: {
         bankId: bank.id,
@@ -181,7 +228,7 @@ export async function runSeed() {
     console.log(`✓ Soal ujian dibuat`);
   }
 
-  // 7. Jadwal Ujian: Ujian Tengah Semester
+  // 9. Jadwal Ujian UTS
   let exam = await prisma.exam.findFirst({
     where: { schoolId: school.id, token: 'EXM24' },
   });
@@ -189,7 +236,7 @@ export async function runSeed() {
   if (!exam) {
     const now = new Date();
     const endTime = new Date();
-    endTime.setDate(endTime.getDate() + 30); // Aktif 30 hari ke depan
+    endTime.setDate(endTime.getDate() + 30);
 
     exam = await prisma.exam.create({
       data: {
