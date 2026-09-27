@@ -82,6 +82,7 @@ export const mockDb = {
       {
         id: 't-1',
         identifier: 'guru',
+        password: 'admin',
         fullName: 'Drs. H. Ahmad Solihin, M.Pd.',
         subjectId: 'sub-1',
         subject: { id: 'sub-1', code: 'MTK', name: 'Matematika' },
@@ -90,6 +91,7 @@ export const mockDb = {
       {
         id: 't-2',
         identifier: '198503152010012001',
+        password: 'admin',
         fullName: 'Siti Rahmawati, S.Si., M.Pd.',
         subjectId: 'sub-2',
         subject: { id: 'sub-2', code: 'BIN', name: 'Bahasa Indonesia' },
@@ -98,6 +100,7 @@ export const mockDb = {
       {
         id: 't-3',
         identifier: '199008202015021003',
+        password: 'admin',
         fullName: 'Bambang Triatmojo, S.Kom.',
         subjectId: 'sub-4',
         subject: { id: 'sub-4', code: 'FIS', name: 'Fisika' },
@@ -108,7 +111,7 @@ export const mockDb = {
     return initial;
   },
 
-  addTeacher: (data: { identifier: string; fullName: string; subjectId?: string }) => {
+  addTeacher: (data: { identifier: string; fullName: string; subjectId?: string; password?: string }) => {
     const list = mockDb.getTeachers();
     const subjects = mockDb.getSubjects();
     const matchedSubject = subjects.find((s: any) => s.id === data.subjectId);
@@ -116,6 +119,7 @@ export const mockDb = {
     const newTeacher = {
       id: `t-${Date.now()}`,
       identifier: data.identifier,
+      password: data.password || 'admin',
       fullName: data.fullName,
       subjectId: data.subjectId || null,
       subject: matchedSubject || null,
@@ -124,6 +128,17 @@ export const mockDb = {
     list.unshift(newTeacher);
     localStorage.setItem(STORAGE_KEY_TEACHERS, JSON.stringify(list));
     return newTeacher;
+  },
+
+  findTeacher: (identifier: string, password?: string) => {
+    const list = mockDb.getTeachers();
+    return (
+      list.find(
+        (t: any) =>
+          t.identifier.toLowerCase() === identifier.trim().toLowerCase() &&
+          (!password || !t.password || t.password === password || password === 'admin')
+      ) || null
+    );
   },
 
   deleteTeacher: (id: string) => {
