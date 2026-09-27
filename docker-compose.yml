@@ -44,6 +44,17 @@ services:
     volumes:
       - uploads_data:/app/uploads
 
+  web:
+    build:
+      context: ./web-admin
+      dockerfile: Dockerfile
+    container_name: examora_web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
 volumes:
   postgres_data:
   uploads_data:
