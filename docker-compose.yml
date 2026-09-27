@@ -51,7 +51,7 @@ services:
     container_name: examora_web
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "3001:80"
     depends_on:
       - api
 
